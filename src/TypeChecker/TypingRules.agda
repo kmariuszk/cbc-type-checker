@@ -14,7 +14,7 @@ private variable
 data _⊢_∶_ (Γ : Context Type α) : Term α → Type → Set where
   TyTVar
     : (p : x ∈ α)
-    ----------------------------------
+    -------------------------------
     → Γ ⊢ TVar x p ∶ lookupVar Γ x p
 
   TyTLam
@@ -25,7 +25,7 @@ data _⊢_∶_ (Γ : Context Type α) : Term α → Type → Set where
   TyTApp
     : Γ ⊢ u ∶ (TyArr a b)
     → Γ ⊢ v ∶ a
-    ------------------------------------
+    -------------------------------
     → Γ ⊢ TApp u v ∶ b
 
 infix 3 _⊢_∶_
