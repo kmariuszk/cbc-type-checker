@@ -1,5 +1,7 @@
-module TypeChecker.TypingRules {name : Set} where
+module TypeChecker.TypingRules {name : Set} {exception : Set} where
 
+open import Data.List
+open import Data.Empty
 open import Term {name}
 open import TypeChecker.Type
 open import Util.Context {name}
@@ -10,22 +12,48 @@ private variable
   α : Scope name
   a b : Type
   u v : Term α
+  φ φ₁ φ₂ : Ann
+  Ξ : List exception
+  e : exception
 
-data _⊢_∶_ (Γ : Context Type α) : Term α → Type → Set where
+-- Context contains names with types
+data _◂_⊢_∶_∣_ (Ξ : List exception) (Γ : Context Type α) : Term α → Type → Ann → Set where
   TyTVar
     : (p : x ∈ α)
     -------------------------------
-    → Γ ⊢ TVar x p ∶ lookupVar Γ x p
+    → Ξ ◂ Γ ⊢ TVar x p ∶ lookupVar Γ x p ∣ φ
 
   TyTLam
-    : Γ , x ∶ a ⊢ u ∶ b
+    : Ξ ◂ (Γ , x ∶ a) ⊢ u ∶ b ∣ φ₁
     -------------------------------
-    → Γ ⊢ TLam x u ∶ TyArr a b
+    → Ξ ◂ Γ ⊢ TLam x u ∶ a [ φ₁ ]⇒ b ∣ φ₂
 
   TyTApp
-    : Γ ⊢ u ∶ (TyArr a b)
-    → Γ ⊢ v ∶ a
-    -------------------------------
-    → Γ ⊢ TApp u v ∶ b
+    -- There's a term `u` of type `a [ φ ]⇒ b`, where all the possible exceptions that could be thrown are `φ`
+    : Ξ ◂ Γ ⊢ u ∶ a [ φ ]⇒ b ∣ φ
 
-infix 3 _⊢_∶_
+    -- There's a term `v` of type `a`, where all the possible exceptions that could be thrown are `φ`
+    → Ξ ◂ Γ ⊢ v ∶ a ∣ φ
+    -------------------------------
+    → Ξ ◂ Γ ⊢ TApp u v ∶ b ∣ φ
+
+  TyTRaise
+    : e ∈ Ξ
+    → e ∈ φ
+    -------------------------------
+    → Ξ ◂ Γ ⊢ TRaise e ∶ a ∣ φ 
+
+  TyTCatch
+    : e ∈ φ → ⊥
+    → Ξ ◂ Γ ⊢ u ∶ a ∣ (e ∷ φ)
+    → Ξ ◂ Γ ⊢ v ∶ a ∣ φ
+    -------------------------------
+    → Ξ ◂ Γ ⊢ TCatch e u v ∶ a ∣ φ
+
+  TyTDecl
+    : (e ∷ Ξ) ◂ Γ ⊢ u ∶ a ∣ φ
+    ---------------------------
+    → Ξ ◂ Γ ⊢ TDecl e u ∶ a ∣ φ 
+
+infix 3 _◂_⊢_∶_∣_
+ 
