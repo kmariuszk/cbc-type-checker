@@ -8,10 +8,10 @@ Scope : (name : Set) → Set
 Scope name = List name
 
 -- An assertion for "x is a member of the scope".
--- 
-data _∈_ {name : Set} (x : name) : Scope name → Set where
-    here  : ∀ {ns : Scope name}                          → x ∈ (x ∷ ns)
-    there : ∀ {n : name} {ns : Scope name} (_ : x ∈ ns) → x ∈ (n ∷ ns)
+-- With a custom name, so it doesn't clash with the `∈` definition for lists
+data _∈ₛ_ {name : Set} (x : name) : Scope name → Set where
+    here  : ∀ {ns : Scope name}                          → x ∈ₛ (x ∷ ns)
+    there : ∀ {n : name} {ns : Scope name} (_ : x ∈ₛ ns) → x ∈ₛ (n ∷ ns)
 
 sempty : {name : Set} → Scope name
 sempty = []

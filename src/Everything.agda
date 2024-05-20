@@ -4,10 +4,8 @@ open import Agda.Builtin.String
 
 name = String
 
-open import Term {name}
+open import Exceptions {name}
 open import TypeChecker {name}
-open import TypeChecker.Type
-open import TypeChecker.TypingRules {name}
 open import Util.Context {name}
 open import Util.Evaluator
 open import Util.Scope
@@ -22,10 +20,10 @@ private
   id-fun = TLam "x" (TVar "x" here)
 
   id-type : Type
-  id-type = TyArr TyNat TyNat
+  id-type = nat [ aempty ]⇒ nat
 
-  id-tc : Evaluator (cempty ⊢ id-fun ∶ id-type)
-  id-tc = checkType cempty id-fun id-type
+  id-tc : Evaluator (eempty ◂ cempty ⊢ id-fun ∶ id-type ∣ aempty)
+  id-tc = checkType eempty cempty id-fun id-type aempty
 
   test-id : id-tc ≡ return (TyTLam (TyTVar here))
   test-id = refl
