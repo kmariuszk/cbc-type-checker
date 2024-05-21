@@ -76,9 +76,9 @@ checkType Ξ ctx (TRaise e) ty exc with e ∈? Ξ | e ∈? exc
 ...                             | _           | _           = evalError "raising an exception that has not been declared"
 checkType Ξ ctx (TCatch e teTerm faTerm) ty exc with e ∉? exc
 ...                             | yes e∉exc                 = do
-  tr₁ ← checkType Ξ ctx teTerm ty (e ∷ exc)
-  tr₂ ← checkType Ξ ctx faTerm ty exc
-  return (TyTCatch e∉exc tr₁ tr₂)
+                                    tr₁ ← checkType Ξ ctx teTerm ty (e ∷ exc)
+                                    tr₂ ← checkType Ξ ctx faTerm ty exc
+                                    return (TyTCatch e∉exc tr₁ tr₂)
 ...                             | no _                      = evalError "checking an exception that's already covered"
 checkType Ξ ctx term ty exc = do
   (t , tr) ← inferType Ξ ctx term exc

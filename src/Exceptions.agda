@@ -55,10 +55,8 @@ data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → T
     → Ξ ◂ Γ ⊢ TVar x p ∶ lookupVar Γ x p ∣ φ
 
   TyTLam
-    -- given that there's a term `u` of type `b` under context `Γ , x ∶ a` annoted with `φ₁`
     : Ξ ◂ (Γ , x ∶ a) ⊢ u ∶ b ∣ φ₁  
     -------------------------------------
-    -- we derive that under this context `Γ`, there's a `TLam x u` of type `a [ φ₁ ]⇒ b` annoted with `φ₂`
     → Ξ ◂ Γ ⊢ TLam x u ∶ a [ φ₁ ]⇒ b ∣ φ₂
 
   TyTApp

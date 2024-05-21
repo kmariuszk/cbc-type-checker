@@ -20,5 +20,5 @@ _,_∶_ ctx _ v = v ∷ ctx
 infix 4 _,_∶_
 
 lookupVar : (Γ : Context v α) (x : name) (p : x ∈ₛ α) → v
-lookupVar (v ∷ _  ) x here = v
-lookupVar (_ ∷ ctx) x (there p) = lookupVar ctx x p
+lookupVar (v ∷ _  ) x hereₛ = v
+lookupVar (_ ∷ ctx) x (thereₛ p) = lookupVar ctx x p
