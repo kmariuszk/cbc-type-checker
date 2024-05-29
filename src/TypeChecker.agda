@@ -34,6 +34,7 @@ convert_list _ _ = evalError "unequal exceptions"
 --
 convert : (a b : Type) → Evaluator (a ≡ b)
 convert nat nat = return refl
+convert bool bool = return refl
 convert (la [ lφ ]⇒ lb) (ra [ rφ ]⇒ rb) = do
   refl ← convert la ra
   refl ← convert lb rb

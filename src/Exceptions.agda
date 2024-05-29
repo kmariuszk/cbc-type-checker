@@ -23,6 +23,7 @@ eempty = []
    now a Kleisli morphism) -}
 data Type : Set where
   nat    : Type
+  bool : Type
   _[_]⇒_ : (a : Type) → (φ : Ann) → (b : Type) → Type
 
 private variable
