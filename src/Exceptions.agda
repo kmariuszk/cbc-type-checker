@@ -39,11 +39,12 @@ data Term (α : Scope name) : Set where
   -- an equivalent of `_↓_ : Term⁻ → Type → Term⁺` term from PLFA
   -- Annotation type that is going to be used for lambdas
   _↓_ : Term α → Type → Term α
+  TIfThen : Term α → Term α → Term α
 
 private variable
   x : name
   a b : Type
-  u v : Term α
+  cond u v : Term α
   φ φ₁ φ₂ : Ann
   Ξ : List String
   e : String
@@ -57,19 +58,19 @@ data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → T
 
   TyTLam
     : Ξ ◂ (Γ , x ∶ a) ⊢ u ∶ b ∣ φ₁  
-    -------------------------------------
+    ----------------------------------------
     → Ξ ◂ Γ ⊢ TLam x u ∶ a [ φ₁ ]⇒ b ∣ φ₂
 
   TyTApp
     : Ξ ◂ Γ ⊢ u ∶ a [ φ ]⇒ b ∣ φ
     → Ξ ◂ Γ ⊢ v ∶ a ∣ φ
-    ----------------------------
+    ----------------------------------------
     → Ξ ◂ Γ ⊢ TApp u v ∶ b ∣ φ
 
   TyTRaise
     : e ∈ Ξ
     → e ∈ φ
-    --------------------------
+    ----------------------------------------
     → Ξ ◂ Γ ⊢ TRaise e ∶ a ∣ φ 
 
   TyTCatch
@@ -79,14 +80,21 @@ data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → T
     → Ξ ◂ Γ ⊢ u ∶ a ∣ (e ∷ φ)
     -- when extenteded with term `a`, then it is still not annotated with exception `e`
     → Ξ ◂ Γ ⊢ v ∶ a ∣ φ
-      ----------------------------
+    ----------------------------------------
     → Ξ ◂ Γ ⊢ TCatch e u v ∶ a ∣ φ
 
   TyTDecl
     : (e ∷ Ξ) ◂ Γ ⊢ u ∶ a ∣ φ
-    ---------------------------
+    ----------------------------------------
     → Ξ ◂ Γ ⊢ TDecl e u ∶ a ∣ φ 
 
   TyTAnn
     : Ξ ◂ Γ ⊢ u ∶ a ∣ φ
+    ----------------------------------------
     → Ξ ◂ Γ ⊢ (u ↓ a) ∶ a ∣ φ
+
+  TyTIfThen
+    : Ξ ◂ Γ ⊢ cond ∶ bool ∣ φ
+    → Ξ ◂ Γ ⊢ u ∶ a ∣ φ
+    ----------------------------------------
+    → Ξ ◂ Γ ⊢ TIfThen cond u ∶ a ∣ φ
