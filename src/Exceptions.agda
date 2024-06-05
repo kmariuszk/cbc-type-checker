@@ -24,6 +24,7 @@ eempty = []
 data Type : Set where
   nat    : Type
   bool : Type
+  unit : Type
   _[_]⇒_ : (a : Type) → (φ : Ann) → (b : Type) → Type
 
 private variable
@@ -39,7 +40,7 @@ data Term (α : Scope name) : Set where
   -- an equivalent of `_↓_ : Term⁻ → Type → Term⁺` term from PLFA
   -- Annotation type that is going to be used for lambdas
   _↓_ : Term α → Type → Term α
-  TIfThen : Term α → Term α → Term α
+  TIfThenElse : Term α → Term α → Term α → Term α
 
 private variable
   x : name
@@ -93,8 +94,9 @@ data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → T
     ----------------------------------------
     → Ξ ◂ Γ ⊢ (u ↓ a) ∶ a ∣ φ
 
-  TyTIfThen
+  TyTIfThenElse
     : Ξ ◂ Γ ⊢ cond ∶ bool ∣ φ
     → Ξ ◂ Γ ⊢ u ∶ a ∣ φ
+    → Ξ ◂ Γ ⊢ v ∶ a ∣ φ
     ----------------------------------------
-    → Ξ ◂ Γ ⊢ TIfThen cond u ∶ a ∣ φ
+    → Ξ ◂ Γ ⊢ TIfThenElse cond u v ∶ a ∣ φ

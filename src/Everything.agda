@@ -39,7 +39,7 @@ private
   simple-raise-fun = TRaise "ex"
   
   simple-raise-type : Type
-  simple-raise-type = nat
+  simple-raise-type = unit
 
   exceptions-raise : List String
   exceptions-raise = "ex" ∷ []
@@ -96,4 +96,43 @@ private
 
   test-simple-exception : simple-exception-tc ≡ return (TyTDecl (TyTLam (TyTCatch (λ ()) (TyTRaise (here refl) (here refl)) (TyTVar hereₛ))))
   test-simple-exception = refl
+
+  {- This code tests a simple if-then term -}
+
+  -- scope₂ : Scope name
+  -- scope₂ = "x" ∷ "y" ∷ sempty
+
+  -- simple-if-fun : Term scope₂
+  -- simple-if-fun = TIfThenElse (TVar "x" hereₛ) (TVar "y" (thereₛ hereₛ)) (TVar "y" (thereₛ hereₛ))
+
+  -- simple-if-type : Type
+  -- simple-if-type = nat
+
+  -- context₂ : Context Type scope₂
+  -- context₂ = (cempty , "y" ∶ nat) , "x" ∶ bool
+
+  -- simple-if-tc : Evaluator (eempty ◂ context₂ ⊢ simple-if-fun ∶ simple-if-type ∣ aempty)
+  -- simple-if-tc = checkType eempty context₂ simple-if-fun simple-if-type aempty
+
+  -- test-simple-if : simple-if-tc ≡ return (TyTIfThenElse (TyTVar hereₛ) (TyTVar (thereₛ hereₛ)) (TyTVar (thereₛ hereₛ)))
+  -- test-simple-if = refl 
   
+  {- This code tests an if-then which can throw an exception within a lambda -} 
+  
+  -- scope₂ : Scope name
+  -- scope₂ = "x" ∷ "y" ∷ sempty
+
+  -- simple-if-fun : Term scope₂
+  -- simple-if-fun = TIfThen (TVar "x" hereₛ) (TVar "y" (thereₛ hereₛ))
+
+  -- simple-if-type : Type
+  -- simple-if-type = nat
+
+  -- context₂ : Context Type scope₂
+  -- context₂ = (cempty , "y" ∶ nat) , "x" ∶ bool
+
+  -- simple-if-tc : Evaluator (eempty ◂ context₂ ⊢ simple-if-fun ∶ simple-if-type ∣ aempty)
+  -- simple-if-tc = checkType eempty context₂ simple-if-fun simple-if-type aempty
+
+  -- test-simple-if : simple-if-tc ≡ return (TyTIfThen (TyTVar hereₛ) (TyTVar (thereₛ hereₛ)))
+  -- test-simple-if = refl

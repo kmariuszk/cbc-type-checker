@@ -55,7 +55,7 @@ inferType Ξ ctx (TLam x body) exc = evalError "cannot infer the type of a lambd
 inferType Ξ ctx (TRaise e) exc = evalError "cannot infer the type of a raising error"
 inferType Ξ ctx (TCatch e teTerm faTerm) exc = evalError "cannot infer the type of catching block"
 inferType Ξ ctx (TDecl e term) exc = evalError "cannot infer the type of an exception declaration"
-inferType Ξ ctx (TIfThen e term) exc = evalError "cannot infer the type of an if-statement declaration"
+inferType Ξ ctx (TIfThenElse e tTerm eTerm) exc = evalError "cannot infer the type of an if-statement declaration"
 inferType Ξ ctx (TApp lam arg) exc = do
   (a [ φ ]⇒ b) , gtu ← inferType Ξ ctx lam exc
     where _ → evalError "application head should have a function type"
@@ -82,11 +82,12 @@ checkType Ξ ctx (TCatch e teTerm faTerm) ty exc with e ∉? exc
                                     tr₂ ← checkType Ξ ctx faTerm ty exc
                                     return (TyTCatch e∉exc tr₁ tr₂)
 ...                             | no _                      = evalError "checking an exception that's already covered"
-checkType Ξ ctx (TIfThen cond t) ty exc = do
+checkType Ξ ctx (TIfThenElse cond tTerm eTerm) ty exc = do
   (bool , tr₁) ← inferType Ξ ctx cond exc
     where _ → evalError "if-then condition should have a boolean type"
-  tr₂ ← checkType Ξ ctx t ty exc
-  return (TyTIfThen tr₁ tr₂)
+  tr₂ ← checkType Ξ ctx tTerm ty exc
+  tr₃ ← checkType Ξ ctx eTerm ty exc
+  return (TyTIfThenElse tr₁ tr₂ tr₃)
 checkType Ξ ctx term ty exc = do
   (t , tr) ← inferType Ξ ctx term exc
   -- we call the conversion checker, which (if it succeeds) returns an equality proof,
