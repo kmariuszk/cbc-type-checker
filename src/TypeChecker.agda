@@ -8,6 +8,7 @@ open import Exceptions {name}
 open import Util.Context {name}
 open import Util.Evaluator
 open import Util.Scope
+open import Util.Annotation
 open import Relation.Nullary
 
 open import Agda.Builtin.Equality
@@ -56,12 +57,17 @@ inferType Ξ ctx (TRaise e) exc = evalError "cannot infer the type of a raising 
 inferType Ξ ctx (TCatch e teTerm faTerm) exc = evalError "cannot infer the type of catching block"
 inferType Ξ ctx (TDecl e term) exc = evalError "cannot infer the type of an exception declaration"
 inferType Ξ ctx (TIfThenElse e tTerm eTerm) exc = evalError "cannot infer the type of an if-statement declaration"
+
 inferType Ξ ctx (TApp lam arg) exc = do
-  (a [ φ ]⇒ b) , gtu ← inferType Ξ ctx lam exc
+  (arr , gtu) ← inferType Ξ ctx lam exc
+  (a [ φ₁ ]⇒ b) ← arr
     where _ → evalError "application head should have a function type"
-  refl ← convert_list φ exc
+  (_ ◂ _ ⊢ _ ∶ _ ∣ φ₂) ← gtu
+    where _ → evalError "error"
+  refl ← convert_list φ₁ exc
   gtv ← checkType Ξ ctx arg a exc
   return (b , TyTApp gtu gtv)
+
 inferType Ξ ctx (term ↓ type) exc = do
   tr ← checkType Ξ ctx term type exc
   return (type , TyTAnn tr)
@@ -93,4 +99,4 @@ checkType Ξ ctx term ty exc = do
   -- we call the conversion checker, which (if it succeeds) returns an equality proof,
   -- unifying the left- and right-hand sides of the equality for the remainder of the do-block
   refl ← convert t ty
-  return tr
+  return tr 
