@@ -24,8 +24,6 @@ data Type : Set where
   unit : Type
   _[_]⇒_ : (a : Type) → (φ : Ann) → (b : Type) → Type
 
-private variable
-  α : Scope name
 
 data Term (α : Scope name) : Set where
   TVar  : (x : name) → x ∈ₛ α → Term α
@@ -40,6 +38,7 @@ data Term (α : Scope name) : Set where
   TIfThenElse : Term α → Term α → Term α → Term α
 
 private variable
+  α : Scope name
   x : name
   a b : Type
   cond u v : Term α
@@ -47,8 +46,10 @@ private variable
   Ξ : List String
   e : String
 
--- infixr 100 _◂_⊢_∶_∣_
+infix 20 _◂_⊢_∶_∣_  
 
+-- This is a dependent function
+-- The type of the output, depends on the input
 data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → Type → Ann → Set where
 
   TyTVar
@@ -57,10 +58,10 @@ data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → T
     → Ξ ◂ Γ ⊢ TVar x p ∶ lookupVar Γ x p ∣ φ
 
   TyTLam
-    : Ξ ◂ (Γ , x ∶ a) ⊢ u ∶ b ∣ φ₁  
+    : Ξ ◂ (Γ , x ∶ a) ⊢ u ∶ b ∣ (φ₁ U φ₂) 
     ----------------------------------------
-    → Ξ ◂ Γ ⊢ TLam x u ∶ a [ φ₁ ]⇒ b ∣ ∅
-
+    → Ξ ◂ Γ ⊢ TLam x u ∶ a [ φ₁ ]⇒ b ∣ φ₂
+  
   TyTApp
     : Ξ ◂ Γ ⊢ u ∶ a [ φ₁ ]⇒ b ∣ φ₂
     → Ξ ◂ Γ ⊢ v ∶ a ∣ φ₃
@@ -95,3 +96,6 @@ data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → T
     → Ξ ◂ Γ ⊢ v ∶ a ∣ φ₃
     ----------------------------------------
     → Ξ ◂ Γ ⊢ TIfThenElse cond u v ∶ a ∣ (φ₁ U φ₂ U φ₃)
+
+getAnn : {a : List String} {b : Context Type α} {c : Term α} {d : Type} {ann : Ann} → a ◂ b ⊢ c ∶ d ∣ ann → Ann
+getAnn {_} {_} {_} {_} {_} {ann} x = ann

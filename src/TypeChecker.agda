@@ -3,7 +3,7 @@ module TypeChecker {name : Set} where
 open import Data.String.Properties
 open import Data.List.Membership.DecSetoid ≡-decSetoid
 
-open import Data.String
+open import Data.String hiding (_++_)
 open import Exceptions {name}
 open import Util.Context {name}
 open import Util.Evaluator
@@ -50,6 +50,17 @@ convert _ _ = evalError "unequal types"
 -- but also that it is a derivation for the given input(s).
 inferType : ∀ (Ξ : List String) (Γ : Context Type α) u             (ann : Ann) → Evaluator (Σ[ t ∈ Type ] Ξ ◂ Γ ⊢ u ∶ t ∣ ann)
 checkType : ∀ (Ξ : List String) (Γ : Context Type α) u (ty : Type) (ann : Ann) → Evaluator (Ξ ◂ Γ ⊢ u ∶ ty ∣ ann)
+-- checkAnn takes a term and basically just checks if there any exceptions, if there are then it just adds it to a list.
+checkAnn  : Term α → Ann
+checkAnn (TVar _ _) = ∅
+checkAnn (TLam _ body) = checkAnn body
+checkAnn (TApp u v) = checkAnn u U checkAnn v
+checkAnn (TRaise e) = ∅
+checkAnn (TCatch e u v) = ∅
+checkAnn (TDecl e u) = checkAnn u
+checkAnn (term ↓ (a [ φ ]⇒ b)) = φ U (checkAnn term)
+checkAnn (term ↓ _) = ∅
+checkAnn (TIfThenElse cond u v) = checkAnn cond U checkAnn u U checkAnn v
 
 inferType Ξ ctx (TVar x index) exc = return (lookupVar ctx x index , TyTVar index)
 inferType Ξ ctx (TLam x body) exc = evalError "cannot infer the type of a lambda"
@@ -59,13 +70,16 @@ inferType Ξ ctx (TDecl e term) exc = evalError "cannot infer the type of an exc
 inferType Ξ ctx (TIfThenElse e tTerm eTerm) exc = evalError "cannot infer the type of an if-statement declaration"
 
 inferType Ξ ctx (TApp lam arg) exc = do
-  (arr , gtu) ← inferType Ξ ctx lam exc
-  (a [ φ₁ ]⇒ b) ← arr
+  let φ₂ = checkAnn lam
+  let φ₃ = checkAnn arg
+
+  (a [ φ₁ ]⇒ b , gtu) ← inferType Ξ ctx lam φ₂
     where _ → evalError "application head should have a function type"
-  (_ ◂ _ ⊢ _ ∶ _ ∣ φ₂) ← gtu
-    where _ → evalError "error"
-  refl ← convert_list φ₁ exc
-  gtv ← checkType Ξ ctx arg a exc
+  
+  gtv ← checkType Ξ ctx arg a φ₃
+  
+  refl ← convert_list (φ₁ U φ₂ U φ₃) exc
+  
   return (b , TyTApp gtu gtv)
 
 inferType Ξ ctx (term ↓ type) exc = do
@@ -73,7 +87,7 @@ inferType Ξ ctx (term ↓ type) exc = do
   return (type , TyTAnn tr)
   
 checkType Ξ ctx (TLam x body) (a [ φ ]⇒ b) exc = do
-  tr ← checkType Ξ (ctx , x ∶ a) body b φ
+  tr ← checkType Ξ (ctx , x ∶ a) body b (φ U exc) 
   return (TyTLam tr)
 checkType _ _ (TLam _ _) _ _ = evalError "lambda should have a function type"
 checkType Ξ ctx (TDecl e term) ty exc = do
@@ -84,19 +98,31 @@ checkType Ξ ctx (TRaise e) ty exc with e ∈? Ξ | e ∈? exc
 ...                             | _           | _           = evalError "raising an exception that has not been declared"
 checkType Ξ ctx (TCatch e teTerm faTerm) ty exc with e ∉? exc
 ...                             | yes e∉exc                 = do
-                                    tr₁ ← checkType Ξ ctx teTerm ty (e ∷ exc)
-                                    tr₂ ← checkType Ξ ctx faTerm ty exc
-                                    return (TyTCatch e∉exc tr₁ tr₂)
+                                    let φ₁ = checkAnn teTerm
+                                    let φ₂ = checkAnn faTerm
+
+                                    refl ← convert_list ((φ₁ ∖ (set e)) U φ₂) exc
+
+                                    tr₁ ← checkType Ξ ctx teTerm ty (e ∷ φ₁)
+                                    tr₂ ← checkType Ξ ctx faTerm ty φ₂
+                                    return (TyTCatch tr₁ tr₂)
 ...                             | no _                      = evalError "checking an exception that's already covered"
 checkType Ξ ctx (TIfThenElse cond tTerm eTerm) ty exc = do
-  (bool , tr₁) ← inferType Ξ ctx cond exc
+  let φ₁ = checkAnn cond
+  let φ₂ = checkAnn tTerm
+  let φ₃ = checkAnn eTerm
+
+  refl ← convert_list (φ₁ U φ₂ U φ₃) exc
+
+  (bool , tr₁) ← inferType Ξ ctx cond φ₁
     where _ → evalError "if-then condition should have a boolean type"
-  tr₂ ← checkType Ξ ctx tTerm ty exc
-  tr₃ ← checkType Ξ ctx eTerm ty exc
+  tr₂ ← checkType Ξ ctx tTerm ty φ₂
+  tr₃ ← checkType Ξ ctx eTerm ty φ₃
+  
   return (TyTIfThenElse tr₁ tr₂ tr₃)
 checkType Ξ ctx term ty exc = do
   (t , tr) ← inferType Ξ ctx term exc
   -- we call the conversion checker, which (if it succeeds) returns an equality proof,
   -- unifying the left- and right-hand sides of the equality for the remainder of the do-block
   refl ← convert t ty
-  return tr 
+  return tr  
