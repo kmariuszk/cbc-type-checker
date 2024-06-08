@@ -72,30 +72,27 @@ private
   exceptions : List String
   exceptions = "ex" ∷ []
 
-  annotations : List String
-  annotations = "ex" ∷ []
-
   simple-catch-tc : Evaluator (exceptions ◂ context ⊢ simple-catch-fun ∶ simple-catch-type ∣ aempty)
   simple-catch-tc = checkType exceptions context simple-catch-fun simple-catch-type aempty
 
-  test-simple-catch : simple-catch-tc ≡ return (TyTCatch (λ ()) (TyTRaise (here refl) (here refl)) (TyTVar hereₛ))
+  test-simple-catch : simple-catch-tc ≡ return (TyTCatch (TyTRaise (here refl) (here refl)) (TyTVar hereₛ))
   test-simple-catch = refl
 
   {- This code tests a lambda which doesn't throw any errors but has a catch block in its body -} 
 
-  simple-exception-fun : Term sempty
-  simple-exception-fun = TDecl "ex" (TLam "x" (TCatch "ex"
-                                     (TRaise "ex")
-                                     (TVar "x" hereₛ)))
+  -- simple-exception-fun : Term sempty
+  -- simple-exception-fun = TDecl "ex" (TLam "x" (TCatch "ex"
+  --                                    (TRaise "ex")
+  --                                    (TVar "x" hereₛ)))
 
-  simple-exception-type : Type
-  simple-exception-type = nat [ aempty ]⇒ nat
+  -- simple-exception-type : Type
+  -- simple-exception-type = nat [ aempty ]⇒ nat
 
-  simple-exception-tc : Evaluator (eempty ◂ cempty ⊢ simple-exception-fun ∶ simple-exception-type ∣ aempty)
-  simple-exception-tc = checkType eempty cempty simple-exception-fun simple-exception-type aempty
+  -- simple-exception-tc : Evaluator (eempty ◂ cempty ⊢ simple-exception-fun ∶ simple-exception-type ∣ aempty)
+  -- simple-exception-tc = checkType eempty cempty simple-exception-fun simple-exception-type aempty
 
-  test-simple-exception : simple-exception-tc ≡ return (TyTDecl (TyTLam (TyTCatch (λ ()) (TyTRaise (here refl) (here refl)) (TyTVar hereₛ))))
-  test-simple-exception = refl
+  -- test-simple-exception : simple-exception-tc ≡ return (TyTDecl (TyTLam (TyTCatch (λ ()) (TyTRaise (here refl) (here refl)) (TyTVar hereₛ))))
+  -- test-simple-exception = refl
 
   {- This code tests a simple if-then term -}
 

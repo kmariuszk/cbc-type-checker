@@ -25,7 +25,7 @@ xs U [] = xs
 xs U (y ∷ ys) = (addUnique y xs) U ys
 
 removeUnique : String → Ann → Ann
-removeUnique str lst = filterᵇ (λ x → x == str) lst
+removeUnique str lst = filterᵇ (λ x → (not (x != str))) lst
 
 _∖_ : Ann → Ann → Ann
 xs ∖ [] = xs
