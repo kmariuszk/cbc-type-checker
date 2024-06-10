@@ -54,13 +54,13 @@ checkType : ∀ (Ξ : List String) (Γ : Context Type α) u (ty : Type) (ann : A
 checkAnn  : Term α → Ann
 checkAnn (TVar _ _) = ∅
 checkAnn (TLam _ body) = checkAnn body
-checkAnn (TApp u v) = checkAnn u U checkAnn v
+checkAnn (TApp u v) = checkAnn u ∪ checkAnn v
 checkAnn (TRaise e) = ∅
 checkAnn (TCatch e u v) = ∅
 checkAnn (TDecl e u) = checkAnn u
-checkAnn (term ↓ (a [ φ ]⇒ b)) = φ U (checkAnn term)
+checkAnn (term ↓ (a [ φ ]⇒ b)) = φ ∪ (checkAnn term)
 checkAnn (term ↓ _) = ∅
-checkAnn (TIfThenElse cond u v) = checkAnn cond U checkAnn u U checkAnn v
+checkAnn (TIfThenElse cond u v) = checkAnn cond ∪ checkAnn u ∪ checkAnn v
 
 inferType Ξ ctx (TVar x index) exc = return (lookupVar ctx x index , TyTVar index)
 inferType Ξ ctx (TLam x body) exc = evalError "cannot infer the type of a lambda"
@@ -78,7 +78,7 @@ inferType Ξ ctx (TApp lam arg) exc = do
   
   gtv ← checkType Ξ ctx arg a φ₃
   
-  refl ← convert_list (φ₁ U φ₂ U φ₃) exc
+  refl ← convert_list (φ₁ ∪ φ₂ ∪ φ₃) exc
   
   return (b , TyTApp gtu gtv)
 
@@ -87,7 +87,7 @@ inferType Ξ ctx (term ↓ type) exc = do
   return (type , TyTAnn tr)
   
 checkType Ξ ctx (TLam x body) (a [ φ ]⇒ b) exc = do
-  tr ← checkType Ξ (ctx , x ∶ a) body b (φ U exc) 
+  tr ← checkType Ξ (ctx , x ∶ a) body b (φ ∪ exc) 
   return (TyTLam tr)
 checkType _ _ (TLam _ _) _ _ = evalError "lambda should have a function type"
 checkType Ξ ctx (TDecl e term) ty exc = do
@@ -101,9 +101,9 @@ checkType Ξ ctx (TCatch e teTerm faTerm) ty exc with e ∉? exc
                                     let φ₁ = checkAnn teTerm
                                     let φ₂ = checkAnn faTerm
 
-                                    refl ← convert_list ((φ₁ ∖ (set e)) U φ₂) exc
+                                    refl ← convert_list (φ₁ ∖ (set e) ∪ φ₂) exc
 
-                                    tr₁ ← checkType Ξ ctx teTerm ty (e ∷ φ₁)
+                                    tr₁ ← checkType Ξ ctx teTerm ty φ₁
                                     tr₂ ← checkType Ξ ctx faTerm ty φ₂
                                     return (TyTCatch tr₁ tr₂)
 ...                             | no _                      = evalError "checking an exception that's already covered"
@@ -112,8 +112,8 @@ checkType Ξ ctx (TIfThenElse cond tTerm eTerm) ty exc = do
   let φ₂ = checkAnn tTerm
   let φ₃ = checkAnn eTerm
 
-  refl ← convert_list (φ₁ U φ₂ U φ₃) exc
-
+  refl ← convert_list (φ₁ ∪ φ₂ ∪ φ₃) exc
+    
   (bool , tr₁) ← inferType Ξ ctx cond φ₁
     where _ → evalError "if-then condition should have a boolean type"
   tr₂ ← checkType Ξ ctx tTerm ty φ₂

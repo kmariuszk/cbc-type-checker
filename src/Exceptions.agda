@@ -10,12 +10,6 @@ open import Util.Annotation
 open import Data.Empty
 open import Data.String
 
-aempty : Ann
-aempty = []
-
-eempty : List String
-eempty = []
-
 {- Types with effect annotations (or, alternatively, where the function arrow is
    now a Kleisli morphism) -}
 data Type : Set where
@@ -48,8 +42,6 @@ private variable
 
 infix 20 _◂_⊢_∶_∣_  
 
--- This is a dependent function
--- The type of the output, depends on the input
 data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → Type → Ann → Set where
 
   TyTVar
@@ -58,7 +50,7 @@ data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → T
     → Ξ ◂ Γ ⊢ TVar x p ∶ lookupVar Γ x p ∣ φ
 
   TyTLam
-    : Ξ ◂ (Γ , x ∶ a) ⊢ u ∶ b ∣ (φ₁ U φ₂) 
+    : Ξ ◂ (Γ , x ∶ a) ⊢ u ∶ b ∣ (φ₁ ∪ φ₂) 
     ----------------------------------------
     → Ξ ◂ Γ ⊢ TLam x u ∶ a [ φ₁ ]⇒ b ∣ φ₂
   
@@ -66,7 +58,7 @@ data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → T
     : Ξ ◂ Γ ⊢ u ∶ a [ φ₁ ]⇒ b ∣ φ₂
     → Ξ ◂ Γ ⊢ v ∶ a ∣ φ₃
     ----------------------------------------
-    → Ξ ◂ Γ ⊢ TApp u v ∶ b ∣ (φ₁ U φ₂ U φ₃)
+    → Ξ ◂ Γ ⊢ TApp u v ∶ b ∣ (φ₁ ∪ φ₂ ∪ φ₃)
 
   TyTRaise
     : e ∈ Ξ
@@ -75,10 +67,10 @@ data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → T
     → Ξ ◂ Γ ⊢ TRaise e ∶ a ∣ φ 
 
   TyTCatch
-    : Ξ ◂ Γ ⊢ u ∶ a ∣ (e ∷ φ₁)
+    : Ξ ◂ Γ ⊢ u ∶ a ∣ φ₁
     → Ξ ◂ Γ ⊢ v ∶ a ∣ φ₂
     ----------------------------------------
-    → Ξ ◂ Γ ⊢ TCatch e u v ∶ a ∣ ((φ₁ ∖ (set e)) U φ₂) 
+    → Ξ ◂ Γ ⊢ TCatch e u v ∶ a ∣ (φ₁ ∖ (set e) ∪ φ₂) 
 
   TyTDecl
     : (e ∷ Ξ) ◂ Γ ⊢ u ∶ a ∣ φ
@@ -95,7 +87,4 @@ data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → T
     → Ξ ◂ Γ ⊢ u ∶ a ∣ φ₂
     → Ξ ◂ Γ ⊢ v ∶ a ∣ φ₃
     ----------------------------------------
-    → Ξ ◂ Γ ⊢ TIfThenElse cond u v ∶ a ∣ (φ₁ U φ₂ U φ₃)
-
-getAnn : {a : List String} {b : Context Type α} {c : Term α} {d : Type} {ann : Ann} → a ◂ b ⊢ c ∶ d ∣ ann → Ann
-getAnn {_} {_} {_} {_} {_} {ann} x = ann
+    → Ξ ◂ Γ ⊢ TIfThenElse cond u v ∶ a ∣ (φ₁ ∪ φ₂ ∪ φ₃)
