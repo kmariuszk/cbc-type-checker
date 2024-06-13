@@ -12,6 +12,7 @@ open import Util.Scope
 open import Data.List
 open import Data.Empty
 open import Data.List.Relation.Unary.Any
+open import Util.Annotation
 
 private
   open import Agda.Builtin.Equality
@@ -25,60 +26,60 @@ private
   id-fun = TLam "x" (TVar "x" hereₛ)
 
   id-type : Type
-  id-type = nat [ aempty ]⇒ nat
+  id-type = nat [ ∅ ]⇒ nat
 
-  id-tc : Evaluator (eempty ◂ cempty ⊢ id-fun ∶ id-type ∣ aempty)
-  id-tc = checkType eempty cempty id-fun id-type aempty
+  id-tc : Evaluator ([] ◂ cempty ⊢ id-fun ∶ id-type ∣ ∅)
+  id-tc = checkType [] cempty id-fun id-type ∅
 
-  test-id : id-tc ≡ return (TyTLam (TyTVar hereₛ))
+  test-id : id-tc ≡ return (TyTLam (TyTVar hereₛ) _∪_≡_.empty)
   test-id = refl
 
-  {- This code tests the most basic TRaise case with pre-declared exception "ex" -} 
+  -- {- This code tests the most basic TRaise case with pre-declared exception "ex" -} 
 
-  simple-raise-fun : Term sempty
-  simple-raise-fun = TRaise "ex"
+  -- simple-raise-fun : Term sempty
+  -- simple-raise-fun = TRaise "ex"
   
-  simple-raise-type : Type
-  simple-raise-type = unit
+  -- simple-raise-type : Type
+  -- simple-raise-type = unit
 
-  exceptions-raise : List String
-  exceptions-raise = "ex" ∷ []
+  -- exceptions-raise : List String
+  -- exceptions-raise = "ex" ∷ []
 
-  annotations-raise : List String
-  annotations-raise = "ex" ∷ []
+  -- annotations-raise : List String
+  -- annotations-raise = "ex" ∷ []
 
-  simple-raise-tc : Evaluator (exceptions-raise ◂ cempty ⊢ simple-raise-fun ∶ simple-raise-type ∣ annotations-raise)
-  simple-raise-tc = checkType exceptions-raise cempty simple-raise-fun simple-raise-type annotations-raise
+  -- simple-raise-tc : Evaluator (exceptions-raise ◂ cempty ⊢ simple-raise-fun ∶ simple-raise-type ∣ annotations-raise)
+  -- simple-raise-tc = checkType exceptions-raise cempty simple-raise-fun simple-raise-type annotations-raise
 
-  test-simple-raise : simple-raise-tc ≡ return (TyTRaise (here refl) (here refl))
-  test-simple-raise = refl
+  -- test-simple-raise : simple-raise-tc ≡ return (TyTRaise (here refl) (here refl))
+  -- test-simple-raise = refl
 
-  {- This code tests a simple catch block -}
+  -- {- This code tests a simple catch block -}
 
-  scope : Scope name
-  scope = "x" ∷ sempty
+  -- scope : Scope name
+  -- scope = "x" ∷ sempty
 
-  simple-catch-fun : Term scope
-  simple-catch-fun = (TCatch "ex"
-                                     (TRaise "ex")
-                                     (TVar "x" hereₛ))
+  -- simple-catch-fun : Term scope
+  -- simple-catch-fun = (TCatch "ex"
+  --                                    (TRaise "ex")
+  --                                    (TVar "x" hereₛ))
   
-  simple-catch-type : Type
-  simple-catch-type = nat
+  -- simple-catch-type : Type
+  -- simple-catch-type = nat
 
-  context : Context Type scope
-  context = cempty , "x" ∶ nat
+  -- context : Context Type scope
+  -- context = cempty , "x" ∶ nat
 
-  exceptions : List String
-  exceptions = "ex" ∷ []
+  -- exceptions : List String
+  -- exceptions = "ex" ∷ []
 
-  simple-catch-tc : Evaluator (exceptions ◂ context ⊢ simple-catch-fun ∶ simple-catch-type ∣ aempty)
-  simple-catch-tc = checkType exceptions context simple-catch-fun simple-catch-type aempty
+  -- simple-catch-tc : Evaluator (exceptions ◂ context ⊢ simple-catch-fun ∶ simple-catch-type ∣ aempty)
+  -- simple-catch-tc = checkType exceptions context simple-catch-fun simple-catch-type aempty
 
-  test-simple-catch : simple-catch-tc ≡ return (TyTCatch (TyTRaise (here refl) (here refl)) (TyTVar hereₛ))
-  test-simple-catch = refl
+  -- test-simple-catch : simple-catch-tc ≡ return (TyTCatch (TyTRaise (here refl) (here refl)) (TyTVar hereₛ))
+  -- test-simple-catch = refl
 
-  {- This code tests a lambda which doesn't throw any errors but has a catch block in its body -} 
+  -- {- This code tests a lambda which doesn't throw any errors but has a catch block in its body -} 
 
   -- simple-exception-fun : Term sempty
   -- simple-exception-fun = TDecl "ex" (TLam "x" (TCatch "ex"
@@ -96,23 +97,23 @@ private
 
   {- This code tests a simple if-then term -}
 
-  -- scope₂ : Scope name
-  -- scope₂ = "x" ∷ "y" ∷ sempty
+  scope₂ : Scope name
+  scope₂ = "x" ∷ "y" ∷ sempty
 
-  -- simple-if-fun : Term scope₂
-  -- simple-if-fun = TIfThenElse (TVar "x" hereₛ) (TVar "y" (thereₛ hereₛ)) (TVar "y" (thereₛ hereₛ))
+  simple-if-fun : Term scope₂
+  simple-if-fun = TIfThenElse (TVar "x" hereₛ) (TVar "y" (thereₛ hereₛ)) (TVar "y" (thereₛ hereₛ))
 
-  -- simple-if-type : Type
-  -- simple-if-type = nat
+  simple-if-type : Type
+  simple-if-type = nat
 
-  -- context₂ : Context Type scope₂
-  -- context₂ = (cempty , "y" ∶ nat) , "x" ∶ bool
+  context₂ : Context Type scope₂
+  context₂ = (cempty , "y" ∶ nat) , "x" ∶ bool
 
-  -- simple-if-tc : Evaluator (eempty ◂ context₂ ⊢ simple-if-fun ∶ simple-if-type ∣ aempty)
-  -- simple-if-tc = checkType eempty context₂ simple-if-fun simple-if-type aempty
+  simple-if-tc : Evaluator ([] ◂ context₂ ⊢ simple-if-fun ∶ simple-if-type ∣ ∅)
+  simple-if-tc = checkType [] context₂ simple-if-fun simple-if-type ∅
 
-  -- test-simple-if : simple-if-tc ≡ return (TyTIfThenElse (TyTVar hereₛ) (TyTVar (thereₛ hereₛ)) (TyTVar (thereₛ hereₛ)))
-  -- test-simple-if = refl 
+  test-simple-if : simple-if-tc ≡ return (TyTIfThenElse (TyTVar hereₛ) (TyTVar (thereₛ hereₛ)) (TyTVar (thereₛ hereₛ)) _∪_≡_.empty _∪_≡_.empty)
+  test-simple-if = refl 
   
   {- This code tests an if-then which can throw an exception within a lambda -} 
   

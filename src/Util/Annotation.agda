@@ -5,51 +5,38 @@ open import Data.List.Membership.DecSetoid ≡-decSetoid
 open import Data.List
 open import Data.String
 open import Relation.Nullary
+open import Data.Empty using (⊥)
+open import Relation.Nullary.Negation using (¬_; contradiction)
 open import Relation.Binary.PropositionalEquality as Eq using (_≡_; refl; cong)
 open import Data.Bool hiding (_≟_)
+open import Data.Product
+open import Function.Base using (case_of_; _$_)
 
-Ann = List String
+data Ann : Set where
+  ∅ : Ann
+  _+++_ : Ann → String → Ann
 
-∅ : Ann
-∅ = []
+infix 3  _∪_≡_
 
-infixr 5 _∪_
+data _∪_≡_ : Ann → Ann → Ann → Set where
+  empty : ∀ {φ} → φ ∪ ∅ ≡ φ
+  append : ∀ {φ₁ φ₂ φ₃ v} → φ₁ ∪ φ₂ ≡ φ₃ → φ₁ ∪ (φ₂ +++ v) ≡ (φ₃ +++ v)
 
--- Set union of two lists of annotations
-_∪_ : Ann → Ann → Ann
-[] ∪ ys = ys
-(x ∷ xs) ∪ ys with x ∈? ys
-... | yes _ = xs ∪ ys
-... | no _ = x ∷ (xs ∪ ys)
+mergeAnn : (φ₁ φ₂ : Ann) → Σ[ φ₃ ∈ Ann ] φ₁ ∪ φ₂ ≡ φ₃
+mergeAnn φ₁ ∅ = φ₁ , empty
+mergeAnn φ₁ (φ₂ +++ x) with mergeAnn φ₁ φ₂
+... | φ₃ , φ₃-proof = (φ₃ +++ x) , append φ₃-proof
 
--- Helper function to remove a specific element from a list
-remove : String → Ann → Ann
-remove y [] = []
-remove y (x ∷ xs) with x ≟ y
-... | yes _ = xs
-... | no _ = x ∷ remove y xs
+-- Definition of a new datatype to prove membership of a string in Ann
+data _∈ₐ_ : String → Ann → Set where
+  here : ∀ {v φ} → v ∈ₐ (φ +++ v)
+  there : ∀ {v w φ} → v ∈ₐ φ → v ∈ₐ (φ +++ w)
 
--- Set difference between two lists of annotations
-_∖_ : Ann → Ann → Ann
-xs ∖ [] = xs
-xs ∖ (y ∷ ys) with y ∈? xs
-... | yes _ = (remove y xs) ∖ ys
-... | no _ = xs ∖ ys
-
-set : String → Ann
-set e = e ∷ []
-
--- -- Helper to check if two lists are equal when treated as sets
--- equalSets : Ann → Ann → Bool
--- equalSets xs ys = all (∈ ys) xs && all (∈ xs) ys
-
--- -- Prove union is associative, which is helpful for proving more complex properties
--- assocUnion : ∀ (φ₁ φ₂ φ₃ : Ann) → (φ₁ ∪ (φ₂ ∪ φ₃)) ≡ ((φ₁ ∪ φ₂) ∪ φ₃)
--- assocUnion [] φ₂ φ₃ = refl
--- assocUnion (x ∷ φ₁) φ₂ φ₃ with x ∈? (φ₁ ∪ (φ₂ ∪ φ₃))
--- ... | no _ = cong (x ∷_) (assocUnion φ₁ φ₂ φ₃)
--- ... | yes _ = assocUnion φ₁ φ₂ φ₃  -- assuming duplicates do not affect equality
-
--- -- Function to check if union of two lists equals another list
--- checkUnionEqual : Ann → Ann → Ann → Bool
--- checkUnionEqual φ₁ φ₂ φ₃ = equalSets (φ₁ ∪ φ₂) φ₃
+-- Proof generator of membership
+_∈ₐ?_ : (x : String) (set : Ann) → Dec (x ∈ₐ set)
+x ∈ₐ? ∅ = no (λ ())
+x ∈ₐ? (φ +++ a) with x ≟ a
+... | yes refl = yes here
+... | no x≢a with x ∈ₐ? φ
+...    | yes p = yes (there p)
+...    | no n = no (λ { here → contradiction refl x≢a ; (there p') → n p' })
