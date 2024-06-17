@@ -22,9 +22,9 @@ data Type : Set where
 data Term (α : Scope name) : Set where
   TVar  : (x : name) → x ∈ₛ α → Term α
   TLam  : (x : name) (v : Term (x ∷ α)) → Term α
-  -- TApp  : (u v : Term α) → Term α
+  TApp  : (u v : Term α) → Term α
   TRaise : (e : String) → Term α
-  -- TCatch : (e : String) → Term α → Term α → Term α
+  TCatch : (e : String) → Term α → Term α → Term α
   TDecl  : (e : String) → Term α → Term α 
   -- an equivalent of `_↓_ : Term⁻ → Type → Term⁺` term from PLFA
   -- Annotation type that is going to be used for lambdas
@@ -55,11 +55,13 @@ data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → T
     ----------------------------------------
     → Ξ ◂ Γ ⊢ TLam x u ∶ a [ φ₁ ]⇒ b ∣ φ₂
   
-  -- TyTApp
-  --   : Ξ ◂ Γ ⊢ u ∶ a [ φ₁ ]⇒ b ∣ φ₂
-  --   → Ξ ◂ Γ ⊢ v ∶ a ∣ φ₃
-  --   ----------------------------------------
-  --   → Ξ ◂ Γ ⊢ TApp u v ∶ b ∣ (φ₁ ++ φ₂ ++ φ₃)
+  TyTApp
+    : Ξ ◂ Γ ⊢ u ∶ a [ φ₁ ]⇒ b ∣ φ₂
+    → Ξ ◂ Γ ⊢ v ∶ a ∣ φ₃
+    → φ₁ ∪ φ₂ ≡ φ₄
+    → φ₃ ∪ φ₄ ≡ φ₅
+    ----------------------------------------
+    → Ξ ◂ Γ ⊢ TApp u v ∶ b ∣ φ₅
 
   TyTRaise
     : e ∈ Ξ
@@ -67,11 +69,12 @@ data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → T
     ----------------------------------------
     → Ξ ◂ Γ ⊢ TRaise e ∶ a ∣ φ 
 
-  -- TyTCatch
-  --   : Ξ ◂ Γ ⊢ u ∶ a ∣ φ₁
-  --   → Ξ ◂ Γ ⊢ v ∶ a ∣ φ₂
-  --   ----------------------------------------
-  --   → Ξ ◂ Γ ⊢ TCatch e u v ∶ a ∣ (φ₁ ∖ (set e) ++ φ₂) 
+  TyTCatch
+    : Ξ ◂ Γ ⊢ u ∶ a ∣ (φ₁ +++ e)
+    → Ξ ◂ Γ ⊢ v ∶ a ∣ φ₂
+    → φ₁ ∪ φ₂ ≡ φ₃
+    ----------------------------------------
+    → Ξ ◂ Γ ⊢ TCatch e u v ∶ a ∣ φ₃
 
   TyTDecl
     : (e ∷ Ξ) ◂ Γ ⊢ u ∶ a ∣ φ

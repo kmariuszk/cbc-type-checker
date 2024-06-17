@@ -67,26 +67,32 @@ checkAnn (TVar _ _) = ∅
 checkAnn (term ↓ _) = ∅
 checkAnn (TIfThenElse cond u v) = ∅
 checkAnn (TDecl _ _) = ∅
+checkAnn (TRaise e) = ∅ 
+checkAnn (TApp lam arg) = ∅
+checkAnn (TCatch cond teTerm faTerm) = ∅
 
 inferType Ξ ctx (TVar x index) exc = return (lookupVar ctx x index , TyTVar index)
 inferType Ξ ctx (TLam x body) exc = evalError "cannot infer the type of a lambda"
 inferType Ξ ctx (TRaise e) exc = evalError "cannot infer the type of a raising error"
--- inferType Ξ ctx (TCatch e teTerm faTerm) exc = evalError "cannot infer the type of catching block"
+inferType Ξ ctx (TCatch e teTerm faTerm) exc = evalError "cannot infer the type of catching block"
 inferType Ξ ctx (TDecl e term) exc = evalError "cannot infer the type of an exception declaration"
 inferType Ξ ctx (TIfThenElse e tTerm eTerm) exc = evalError "cannot infer the type of an if-statement declaration"
 
--- inferType Ξ ctx (TApp lam arg) exc = do
---   let φ₂ = checkAnn lam
---   let φ₃ = checkAnn arg
+inferType Ξ ctx (TApp lam arg) exc = do
+  let φ₂ = checkAnn lam
 
---   (a [ φ₁ ]⇒ b , gtu) ← inferType Ξ ctx lam φ₂
---     where _ → evalError "application head should have a function type"
+  (a [ φ₁ ]⇒ b , gtu) ← inferType Ξ ctx lam φ₂
+    where _ → evalError "application head should have a function type"
   
---   gtv ← checkType Ξ ctx arg a φ₃
+  let φ₃ = checkAnn arg
+      (φ₄ , φ₄-proof) = mergeAnn φ₁ φ₂
+      (φ₅ , φ₅-proof) = mergeAnn φ₃ φ₄
+
+  gtv ← checkType Ξ ctx arg a φ₃
   
---   refl ← convert_list (φ₁ ++ φ₂ ++ φ₃) exc
+  refl ← convert_ann φ₅ exc
   
---   return (b , TyTApp gtu gtv)
+  return (b , TyTApp gtu gtv φ₄-proof φ₅-proof)
 
 inferType Ξ ctx (term ↓ type) exc = do
   tr ← checkType Ξ ctx term type exc
@@ -103,17 +109,19 @@ checkType Ξ ctx (TDecl e term) ty exc = do
 checkType Ξ ctx (TRaise e) ty exc with e ∈? Ξ | e ∈ₐ? exc
 ...                             | yes (e∈Ξ)   | yes (e∈ₐexc) = return (TyTRaise e∈Ξ e∈ₐexc)
 ...                             | _           | _           = evalError "raising an exception that has not been declared"
--- checkType Ξ ctx (TCatch e teTerm faTerm) ty exc with e ∉? exc
--- ...                             | yes e∉exc                 = do
---                                     let φ₁ = checkAnn teTerm
---                                     let φ₂ = checkAnn faTerm
+checkType Ξ ctx (TCatch e teTerm faTerm) ty exc with e ∈ₐ? exc
+...                             | no e∉exc                 = do
+                                    let φ₁ = checkAnn teTerm
+                                        φ₂ = checkAnn faTerm
+                                        (φ₃ , φ₃-proof) = mergeAnn φ₁ φ₂
 
---                                     refl ← convert_list (φ₁ ∖ (set e) ++ φ₂) exc
+                                    refl ← convert_ann φ₃ exc
 
---                                     tr₁ ← checkType Ξ ctx teTerm ty φ₁
---                                     tr₂ ← checkType Ξ ctx faTerm ty φ₂
---                                     return (TyTCatch tr₁ tr₂)
--- ...                             | no _                      = evalError "checking an exception that's already covered"
+                                    tr₁ ← checkType Ξ ctx teTerm ty (φ₁ +++ e)
+                                    tr₂ ← checkType Ξ ctx faTerm ty φ₂
+                                    
+                                    return (TyTCatch tr₁ tr₂ φ₃-proof)
+...                             | yes _                      = evalError "checking an exception that's already covered"
 checkType Ξ ctx (TIfThenElse cond tTerm eTerm) ty exc = do
   let φ₁ = checkAnn cond
       φ₂ = checkAnn tTerm

@@ -36,48 +36,48 @@ private
 
   -- {- This code tests the most basic TRaise case with pre-declared exception "ex" -} 
 
-  -- simple-raise-fun : Term sempty
-  -- simple-raise-fun = TRaise "ex"
+  simple-raise-fun : Term sempty
+  simple-raise-fun = TRaise "ex"
   
-  -- simple-raise-type : Type
-  -- simple-raise-type = unit
+  simple-raise-type : Type
+  simple-raise-type = unit
 
-  -- exceptions-raise : List String
-  -- exceptions-raise = "ex" ∷ []
+  exceptions-raise : List String
+  exceptions-raise = "ex" ∷ []
 
-  -- annotations-raise : List String
-  -- annotations-raise = "ex" ∷ []
+  annotations-raise : Ann
+  annotations-raise = ∅ +++ "ex"
 
-  -- simple-raise-tc : Evaluator (exceptions-raise ◂ cempty ⊢ simple-raise-fun ∶ simple-raise-type ∣ annotations-raise)
-  -- simple-raise-tc = checkType exceptions-raise cempty simple-raise-fun simple-raise-type annotations-raise
+  simple-raise-tc : Evaluator (exceptions-raise ◂ cempty ⊢ simple-raise-fun ∶ simple-raise-type ∣ annotations-raise)
+  simple-raise-tc = checkType exceptions-raise cempty simple-raise-fun simple-raise-type annotations-raise
 
-  -- test-simple-raise : simple-raise-tc ≡ return (TyTRaise (here refl) (here refl))
-  -- test-simple-raise = refl
+  test-simple-raise : simple-raise-tc ≡ return (TyTRaise (here refl) (hereₐ))
+  test-simple-raise = refl
 
   -- {- This code tests a simple catch block -}
 
-  -- scope : Scope name
-  -- scope = "x" ∷ sempty
+  scope : Scope name
+  scope = "x" ∷ sempty
 
-  -- simple-catch-fun : Term scope
-  -- simple-catch-fun = (TCatch "ex"
-  --                                    (TRaise "ex")
-  --                                    (TVar "x" hereₛ))
+  simple-catch-fun : Term scope
+  simple-catch-fun = (TCatch "ex"
+                                     (TRaise "ex")
+                                     (TVar "x" hereₛ))
   
-  -- simple-catch-type : Type
-  -- simple-catch-type = nat
+  simple-catch-type : Type
+  simple-catch-type = nat
 
-  -- context : Context Type scope
-  -- context = cempty , "x" ∶ nat
+  context : Context Type scope
+  context = cempty , "x" ∶ nat
 
-  -- exceptions : List String
-  -- exceptions = "ex" ∷ []
+  exceptions : List String
+  exceptions = "ex" ∷ []
 
-  -- simple-catch-tc : Evaluator (exceptions ◂ context ⊢ simple-catch-fun ∶ simple-catch-type ∣ aempty)
-  -- simple-catch-tc = checkType exceptions context simple-catch-fun simple-catch-type aempty
+  simple-catch-tc : Evaluator (exceptions ◂ context ⊢ simple-catch-fun ∶ simple-catch-type ∣ ∅)
+  simple-catch-tc = checkType exceptions context simple-catch-fun simple-catch-type ∅
 
-  -- test-simple-catch : simple-catch-tc ≡ return (TyTCatch (TyTRaise (here refl) (here refl)) (TyTVar hereₛ))
-  -- test-simple-catch = refl
+  test-simple-catch : simple-catch-tc ≡ return (TyTCatch (TyTRaise (here refl) (here refl)) (TyTVar hereₛ))
+  test-simple-catch = refl
 
   -- {- This code tests a lambda which doesn't throw any errors but has a catch block in its body -} 
 
@@ -133,4 +133,4 @@ private
   -- simple-if-tc = checkType eempty context₂ simple-if-fun simple-if-type aempty
 
   -- test-simple-if : simple-if-tc ≡ return (TyTIfThen (TyTVar hereₛ) (TyTVar (thereₛ hereₛ)))
-  -- test-simple-if = refl
+  -- test-simple-if = refl 

@@ -29,14 +29,14 @@ mergeAnn φ₁ (φ₂ +++ x) with mergeAnn φ₁ φ₂
 
 -- Definition of a new datatype to prove membership of a string in Ann
 data _∈ₐ_ : String → Ann → Set where
-  here : ∀ {v φ} → v ∈ₐ (φ +++ v)
-  there : ∀ {v w φ} → v ∈ₐ φ → v ∈ₐ (φ +++ w)
+  hereₐ : ∀ {v φ} → v ∈ₐ (φ +++ v)
+  thereₐ : ∀ {v w φ} → v ∈ₐ φ → v ∈ₐ (φ +++ w)
 
 -- Proof generator of membership
 _∈ₐ?_ : (x : String) (set : Ann) → Dec (x ∈ₐ set)
 x ∈ₐ? ∅ = no (λ ())
 x ∈ₐ? (φ +++ a) with x ≟ a
-... | yes refl = yes here
+... | yes refl = yes hereₐ
 ... | no x≢a with x ∈ₐ? φ
-...    | yes p = yes (there p)
-...    | no n = no (λ { here → contradiction refl x≢a ; (there p') → n p' })
+...    | yes p = yes (thereₐ p)
+...    | no n = no (λ { hereₐ → contradiction refl x≢a ; (thereₐ p') → n p' })
