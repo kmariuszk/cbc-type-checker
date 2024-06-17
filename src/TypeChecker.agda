@@ -3,8 +3,10 @@ module TypeChecker {name : Set} where
 open import Data.String.Properties
 open import Data.List.Membership.DecSetoid ≡-decSetoid
 
+open import TypeChecker.Terms {name}
+open import TypeChecker.Types
+open import TypeChecker.TypingRules
 open import Data.String hiding (_++_)
-open import Exceptions {name}
 open import Util.Context {name}
 open import Util.Evaluator
 open import Util.Scope
@@ -21,46 +23,28 @@ private variable
   α : Scope name
   u : Term α
 
-convert_ann : (a b : Ann) → Evaluator (a ≡ b)
-convert_ann ∅ ∅ = return refl
-convert_ann (φ₁ +++ s₁) (φ₂ +++ s₂) with s₁ ≟ s₂
+-- Checking whether two annotations are equal.
+convertAnn : (a b : Ann) → Evaluator (a ≡ b)
+convertAnn ∅ ∅ = return refl
+convertAnn (s₁ +++ φ₁) (s₂ +++ φ₂) with s₁ ≟ s₂
 ... | yes refl = do
-  refl <- convert_ann φ₁ φ₂
+  refl <- convertAnn φ₁ φ₂
   return refl
 ... | no _ = evalError "unequal exceptions"
-convert_ann _ _ = evalError "unequal exceptions"
+convertAnn _ _ = evalError "unequal exceptions"
 
--- convert_list : (a b : List String) → Evaluator (a ≡ b)
--- convert_list [] [] = return refl
--- convert_list (x ∷ xs) (y ∷ ys) with x ≟ y
--- ... | yes refl = do
---   refl <- convert_list xs ys
---   return refl
--- ... | no _ = evalError "unequal exceptions"
--- convert_list _ _ = evalError "unequal exceptions"
-
--- Type checking function application requires conversion checking,
--- i.e. checking whether two types are equal.
---
+-- Checking whether two types are equal.
 convert : (a b : Type) → Evaluator (a ≡ b)
 convert nat nat = return refl
 convert bool bool = return refl
--- convert (la [ lφ ]⇒ lb) (ra [ rφ ]⇒ rb) = do
---   refl ← convert la ra
---   refl ← convert lb rb
---   refl ← convert_list lφ rφ
---   return refl
+convert (la [ lφ ]⇒ lb) (ra [ rφ ]⇒ rb) = do
+  refl ← convert la ra
+  refl ← convert lb rb
+  refl ← convertAnn lφ rφ
+  return refl
 convert _ _ = evalError "unequal types"
 
--- Bidirectional style type checking, with two functions defined mutually.
---
--- Both functions return a typing judgement for the specific input term,
--- so we know that we get a correct typing derivation 
--- but also that it is a derivation for the given input(s).
-inferType : ∀ (Ξ : List String) (Γ : Context Type α) u             (ann : Ann) → Evaluator (Σ[ t ∈ Type ] Ξ ◂ Γ ⊢ u ∶ t ∣ ann)
-checkType : ∀ (Ξ : List String) (Γ : Context Type α) u (ty : Type) (ann : Ann) → Evaluator (Ξ ◂ Γ ⊢ u ∶ ty ∣ ann)
-
--- checkAnn takes a term and basically just checks if there any exceptions, if there are then it just adds it to a list.
+-- Given specific input term, `checkAnn` inspects what exceptions it can throw
 checkAnn  : Term α → Ann
 checkAnn (TLam _ body) = checkAnn body
 checkAnn (TVar _ _) = ∅
@@ -70,6 +54,14 @@ checkAnn (TDecl _ _) = ∅
 checkAnn (TRaise e) = ∅ 
 checkAnn (TApp lam arg) = ∅
 checkAnn (TCatch cond teTerm faTerm) = ∅
+
+-- Bidirectional style type checking, with two functions defined mutually.
+--
+-- Both functions return a typing judgement for the specific input term,
+-- so we know that we get a correct typing derivation 
+-- but also that it is a derivation for the given input(s).
+inferType : ∀ (Ξ : List String) (Γ : Context Type α) u             (ann : Ann) → Evaluator (Σ[ t ∈ Type ] Ξ ◂ Γ ⊢ u ∶ t ∣ ann)
+checkType : ∀ (Ξ : List String) (Γ : Context Type α) u (ty : Type) (ann : Ann) → Evaluator (Ξ ◂ Γ ⊢ u ∶ ty ∣ ann)
 
 inferType Ξ ctx (TVar x index) exc = return (lookupVar ctx x index , TyTVar index)
 inferType Ξ ctx (TLam x body) exc = evalError "cannot infer the type of a lambda"
@@ -90,7 +82,7 @@ inferType Ξ ctx (TApp lam arg) exc = do
 
   gtv ← checkType Ξ ctx arg a φ₃
   
-  refl ← convert_ann φ₅ exc
+  refl ← convertAnn φ₅ exc
   
   return (b , TyTApp gtu gtv φ₄-proof φ₅-proof)
 
@@ -115,9 +107,9 @@ checkType Ξ ctx (TCatch e teTerm faTerm) ty exc with e ∈ₐ? exc
                                         φ₂ = checkAnn faTerm
                                         (φ₃ , φ₃-proof) = mergeAnn φ₁ φ₂
 
-                                    refl ← convert_ann φ₃ exc
+                                    refl ← convertAnn φ₃ exc
 
-                                    tr₁ ← checkType Ξ ctx teTerm ty (φ₁ +++ e)
+                                    tr₁ ← checkType Ξ ctx teTerm ty (e +++ φ₁)
                                     tr₂ ← checkType Ξ ctx faTerm ty φ₂
                                     
                                     return (TyTCatch tr₁ tr₂ φ₃-proof)
@@ -134,7 +126,7 @@ checkType Ξ ctx (TIfThenElse cond tTerm eTerm) ty exc = do
   tr₂ ← checkType Ξ ctx tTerm ty φ₂
   tr₃ ← checkType Ξ ctx eTerm ty φ₃
 
-  refl ← convert_ann φ₅ exc
+  refl ← convertAnn φ₅ exc
     
   return (TyTIfThenElse tr₁ tr₂ tr₃ φ₄-proof φ₅-proof)
 checkType Ξ ctx term ty exc = do

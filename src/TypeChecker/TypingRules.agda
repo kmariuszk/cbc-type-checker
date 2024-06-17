@@ -1,35 +1,17 @@
-module Exceptions {name : Set} where
+module TypeChecker.TypingRules {name : Set} where
 
+-- Imports needed for the String membership proofs
 open import Data.String.Properties
 open import Data.List.Membership.DecSetoid ≡-decSetoid
 
-open import Data.List
+open import TypeChecker.Terms {name}
+open import TypeChecker.Types
 open import Util.Scope
 open import Util.Context
 open import Util.Annotation
+open import Data.List
 open import Data.Empty
 open import Data.String hiding (_++_)
-
-{- Types with effect annotations (or, alternatively, where the function arrow is
-   now a Kleisli morphism) -}
-data Type : Set where
-  nat    : Type
-  bool : Type
-  unit : Type
-  _[_]⇒_ : (a : Type) → (φ : Ann) → (b : Type) → Type
-
-
-data Term (α : Scope name) : Set where
-  TVar  : (x : name) → x ∈ₛ α → Term α
-  TLam  : (x : name) (v : Term (x ∷ α)) → Term α
-  TApp  : (u v : Term α) → Term α
-  TRaise : (e : String) → Term α
-  TCatch : (e : String) → Term α → Term α → Term α
-  TDecl  : (e : String) → Term α → Term α 
-  -- an equivalent of `_↓_ : Term⁻ → Type → Term⁺` term from PLFA
-  -- Annotation type that is going to be used for lambdas
-  _↓_ : Term α → Type → Term α
-  TIfThenElse : Term α → Term α → Term α → Term α
 
 private variable
   α : Scope name
@@ -70,7 +52,7 @@ data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → T
     → Ξ ◂ Γ ⊢ TRaise e ∶ a ∣ φ 
 
   TyTCatch
-    : Ξ ◂ Γ ⊢ u ∶ a ∣ (φ₁ +++ e)
+    : Ξ ◂ Γ ⊢ u ∶ a ∣ (e +++ φ₁)
     → Ξ ◂ Γ ⊢ v ∶ a ∣ φ₂
     → φ₁ ∪ φ₂ ≡ φ₃
     ----------------------------------------
@@ -93,4 +75,4 @@ data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → T
     → φ₁ ∪ φ₂ ≡ φ₄
     → φ₃ ∪ φ₄ ≡ φ₅
     ----------------------------------------
-    → Ξ ◂ Γ ⊢ TIfThenElse cond u v ∶ a ∣ φ₅ 
+    → Ξ ◂ Γ ⊢ TIfThenElse cond u v ∶ a ∣ φ₅
