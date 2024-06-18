@@ -56,47 +56,6 @@ private
   test-simple-raise : simple-raise-tc ≡ return (TyTRaise (here refl) (hereₐ))
   test-simple-raise = refl
 
-  -- {- This code tests a simple catch block -}
-
-  scope : Scope name
-  scope = "x" ∷ sempty
-
-  simple-catch-fun : Term scope
-  simple-catch-fun = (TCatch "ex"
-                                     (TRaise "ex")
-                                     (TVar "x" hereₛ))
-  
-  simple-catch-type : Type
-  simple-catch-type = nat
-
-  context : Context Type scope
-  context = cempty , "x" ∶ nat
-
-  exceptions : List String
-  exceptions = "ex" ∷ []
-
-  simple-catch-tc : Evaluator (exceptions ◂ context ⊢ simple-catch-fun ∶ simple-catch-type ∣ ∅)
-  simple-catch-tc = checkType exceptions context simple-catch-fun simple-catch-type ∅
-
-  -- test-simple-catch : simple-catch-tc ≡ return (TyTCatch (TyTRaise (here refl) (here refl)) (TyTVar hereₛ))
-  -- test-simple-catch = refl
-
-  -- {- This code tests a lambda which doesn't throw any errors but has a catch block in its body -} 
-
-  -- simple-exception-fun : Term sempty
-  -- simple-exception-fun = TDecl "ex" (TLam "x" (TCatch "ex"
-  --                                    (TRaise "ex")
-  --                                    (TVar "x" hereₛ)))
-
-  -- simple-exception-type : Type
-  -- simple-exception-type = nat [ aempty ]⇒ nat
-
-  -- simple-exception-tc : Evaluator (eempty ◂ cempty ⊢ simple-exception-fun ∶ simple-exception-type ∣ aempty)
-  -- simple-exception-tc = checkType eempty cempty simple-exception-fun simple-exception-type aempty
-
-  -- test-simple-exception : simple-exception-tc ≡ return (TyTDecl (TyTLam (TyTCatch (λ ()) (TyTRaise (here refl) (here refl)) (TyTVar hereₛ))))
-  -- test-simple-exception = refl
-
   {- This code tests a simple if-then term -}
 
   scope₂ : Scope name
@@ -117,22 +76,43 @@ private
   test-simple-if : simple-if-tc ≡ return (TyTIfThenElse (TyTVar hereₛ) (TyTVar (thereₛ hereₛ)) (TyTVar (thereₛ hereₛ)) _∪_≡_.empty _∪_≡_.empty)
   test-simple-if = refl 
   
-  {- This code tests an if-then which can throw an exception within a lambda -} 
+  {- This code tests an if-then-else which can throw an exception within a lambda -} 
   
-  -- scope₂ : Scope name
-  -- scope₂ = "x" ∷ "y" ∷ sempty
+  scope₃ : Scope name
+  scope₃ = "x" ∷ "y" ∷ sempty
 
-  -- simple-if-fun : Term scope₂
-  -- simple-if-fun = TIfThen (TVar "x" hereₛ) (TVar "y" (thereₛ hereₛ))
+  if-with-exception-fun : Term scope₃
+  if-with-exception-fun = TDecl 
+    ("ex") 
+    (
+      (TLam 
+        "z" 
+        (TIfThenElse 
+          ((TVar "z" ((hereₛ)))) 
+          (TRaise "ex") 
+          ((TVar "y" (thereₛ (thereₛ hereₛ)))))) 
+    ↓ 
+    ((bool [ "ex" +++ ∅ ]⇒ nat)))
 
-  -- simple-if-type : Type
-  -- simple-if-type = nat
+  if-with-exception-type : Type
+  if-with-exception-type = bool [ "ex" +++ ∅ ]⇒ nat
 
-  -- context₂ : Context Type scope₂
-  -- context₂ = (cempty , "y" ∶ nat) , "x" ∶ bool
+  context₃ : Context Type scope₃
+  context₃ = (cempty , "y" ∶ nat) , "x" ∶ bool
 
-  -- simple-if-tc : Evaluator (eempty ◂ context₂ ⊢ simple-if-fun ∶ simple-if-type ∣ aempty)
-  -- simple-if-tc = checkType eempty context₂ simple-if-fun simple-if-type aempty
+  if-with-exception-tc : Evaluator ([] ◂ context₃ ⊢ if-with-exception-fun ∶ if-with-exception-type ∣ ∅)
+  if-with-exception-tc = checkType [] context₃ if-with-exception-fun if-with-exception-type ∅
 
-  -- test-simple-if : simple-if-tc ≡ return (TyTIfThen (TyTVar hereₛ) (TyTVar (thereₛ hereₛ)))
-  -- test-simple-if = refl 
+  test-if-with-exception : if-with-exception-tc ≡ return (
+    TyTDecl (
+      TyTAnn (
+        TyTLam (
+          TyTIfThenElse 
+          (TyTVar hereₛ) 
+          (TyTRaise (here refl) hereₐ) 
+          (TyTVar (thereₛ (thereₛ hereₛ))) 
+          (append _∪_≡_.empty) 
+          (append _∪_≡_.empty)
+        ) _∪_≡_.empty
+    )))
+  test-if-with-exception = refl 

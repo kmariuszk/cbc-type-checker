@@ -30,8 +30,9 @@ convertAnn (s₁ +++ φ₁) (s₂ +++ φ₂) with s₁ ≟ s₂
 ... | yes refl = do
   refl <- convertAnn φ₁ φ₂
   return refl
-... | no _ = evalError "unequal exceptions"
-convertAnn _ _ = evalError "unequal exceptions"
+... | no _ = evalError "unequal exceptions 2"
+convertAnn ∅ _ = evalError "unequal exceptions 3"
+convertAnn _ ∅ = evalError "unequal exceptions 4"
 
 -- Checking whether two types are equal.
 convert : (a b : Type) → Evaluator (a ≡ b)
@@ -48,12 +49,23 @@ convert _ _ = evalError "unequal types"
 checkAnn  : Term α → Ann
 checkAnn (TLam _ body) = checkAnn body
 checkAnn (TVar _ _) = ∅
-checkAnn (term ↓ _) = ∅
-checkAnn (TIfThenElse cond u v) = ∅
-checkAnn (TDecl _ _) = ∅
-checkAnn (TRaise e) = ∅ 
-checkAnn (TApp lam arg) = ∅
-checkAnn (TCatch cond teTerm faTerm) = ∅
+checkAnn (term ↓ _) = checkAnn term
+checkAnn (TIfThenElse cond u v) = let φ₁ = checkAnn cond
+                                      φ₂ = checkAnn u
+                                      φ₃ = checkAnn v
+                                      (φ₄ , _) = mergeAnn φ₁ φ₂
+                                      (φ₅ , _) = mergeAnn φ₃ φ₄                                
+                                  in  φ₅
+checkAnn (TDecl _ body) = checkAnn body
+checkAnn (TRaise e) = (e +++ ∅)
+checkAnn (TApp lam arg) = let φ₁ = checkAnn lam
+                              φ₂ = checkAnn arg
+                              (φ₃ , _) = mergeAnn φ₁ φ₂                             
+                          in  φ₃
+checkAnn (TCatch e teTerm faTerm) = let φ₁ = checkAnn teTerm
+                                        φ₂ = checkAnn faTerm
+                                        (φ₃ , _) = mergeAnn φ₁ φ₂                             
+                                    in  (e +++ φ₃)
 
 -- Bidirectional style type checking, with two functions defined mutually.
 --
@@ -100,7 +112,9 @@ checkType Ξ ctx (TDecl e term) ty exc = do
   return (TyTDecl tr)
 checkType Ξ ctx (TRaise e) ty exc with e ∈? Ξ | e ∈ₐ? exc
 ...                             | yes (e∈Ξ)   | yes (e∈ₐexc) = return (TyTRaise e∈Ξ e∈ₐexc)
-...                             | _           | _           = evalError "raising an exception that has not been declared"
+...                             | yes _       | _           = evalError "raising an exception that has not been annotated"
+...                             | _           | yes _       = evalError "raising an exception that has not been declared"
+...                             | _           | _           = evalError "raising an exception that has neither been declared or annotated"
 checkType Ξ ctx (TCatch e teTerm faTerm) ty exc with e ∈ₐ? exc
 ...                             | no e∉exc                 = do
                                     let φ₁ = checkAnn teTerm
