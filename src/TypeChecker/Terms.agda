@@ -15,6 +15,6 @@ data Term (α : Scope name) : Set where
   TRaise : (e : String) → Term α
   TCatch : (e : String) → Term α → Term α → Term α
   TDecl  : (e : String) → Term α → Term α 
-  -- Annotation type that is going to be used for lambdas (an equivalent of `_↓_ : Term⁻ → Type → Term⁺` term from PLFA)
+  -- Annotation type that is used for lambdas (an equivalent of `_↓_ : Term⁻ → Type → Term⁺` term from PLFA)
   _↓_ : Term α → Type → Term α
   TIfThenElse : Term α → Term α → Term α → Term α

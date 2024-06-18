@@ -42,7 +42,7 @@ private
   simple-raise-fun = TRaise "ex"
   
   simple-raise-type : Type
-  simple-raise-type = unit
+  simple-raise-type = nat
 
   exceptions-raise : List String
   exceptions-raise = "ex" ∷ []
