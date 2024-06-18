@@ -46,26 +46,28 @@ convert (la [ lφ ]⇒ lb) (ra [ rφ ]⇒ rb) = do
 convert _ _ = evalError "unequal types"
 
 -- Given specific input term, `checkAnn` inspects what exceptions it can throw
+-- (it traverses until it reaches TCatch or any other term without subterms)
 checkAnn  : Term α → Ann
-checkAnn (TLam _ body) = checkAnn body
 checkAnn (TVar _ _) = ∅
-checkAnn (term ↓ _) = checkAnn term
+checkAnn (TLam _ body) = checkAnn body
+checkAnn (TApp lam arg) = let φ₁ = checkAnn lam
+                              φ₂ = checkAnn arg
+                              (φ₃ , _) = mergeAnn φ₁ φ₂                             
+                          in  φ₃
+checkAnn (TRaise e) = e +++ ∅
+checkAnn (TDecl _ body) = checkAnn body
+-- Once we reach TCatch term, we stop traversing and return the exceptions that can be thrown (since all other exceptions are covered by the catch block)
+checkAnn (TCatch e teTerm faTerm) = ∅
 checkAnn (TIfThenElse cond u v) = let φ₁ = checkAnn cond
                                       φ₂ = checkAnn u
                                       φ₃ = checkAnn v
                                       (φ₄ , _) = mergeAnn φ₁ φ₂
                                       (φ₅ , _) = mergeAnn φ₃ φ₄                                
                                   in  φ₅
-checkAnn (TDecl _ body) = checkAnn body
-checkAnn (TRaise e) = (e +++ ∅)
-checkAnn (TApp lam arg) = let φ₁ = checkAnn lam
-                              φ₂ = checkAnn arg
-                              (φ₃ , _) = mergeAnn φ₁ φ₂                             
-                          in  φ₃
-checkAnn (TCatch e teTerm faTerm) = let φ₁ = checkAnn teTerm
-                                        φ₂ = checkAnn faTerm
-                                        (φ₃ , _) = mergeAnn φ₁ φ₂                             
-                                    in  (e +++ φ₃)
+-- We skip the declaration, we only look for TRaise terms (problem: TCatch within a TCatch)
+checkAnn (term ↓ (a [ φ₁ ]⇒ b)) = checkAnn term 
+-- In the language we are considering, we do not have any other terms that can throw exceptions
+checkAnn (_ ↓ _) = ∅
 
 -- Bidirectional style type checking, with two functions defined mutually.
 --
@@ -75,77 +77,76 @@ checkAnn (TCatch e teTerm faTerm) = let φ₁ = checkAnn teTerm
 inferType : ∀ (Ξ : List String) (Γ : Context Type α) u             (ann : Ann) → Evaluator (Σ[ t ∈ Type ] Ξ ◂ Γ ⊢ u ∶ t ∣ ann)
 checkType : ∀ (Ξ : List String) (Γ : Context Type α) u (ty : Type) (ann : Ann) → Evaluator (Ξ ◂ Γ ⊢ u ∶ ty ∣ ann)
 
-inferType Ξ ctx (TVar x index) exc = return (lookupVar ctx x index , TyTVar index)
-inferType Ξ ctx (TLam x body) exc = evalError "cannot infer the type of a lambda"
-inferType Ξ ctx (TRaise e) exc = evalError "cannot infer the type of a raising error"
-inferType Ξ ctx (TCatch e teTerm faTerm) exc = evalError "cannot infer the type of catching block"
-inferType Ξ ctx (TDecl e term) exc = evalError "cannot infer the type of an exception declaration"
-inferType Ξ ctx (TIfThenElse e tTerm eTerm) exc = evalError "cannot infer the type of an if-statement declaration"
-
-inferType Ξ ctx (TApp lam arg) exc = do
+inferType Ξ Γ (TVar x index) φ = return (lookupVar Γ x index , TyTVar index)
+inferType Ξ Γ (TLam x body) φ = evalError "cannot infer the type of a lambda"
+inferType Ξ Γ (TRaise e) φ = evalError "cannot infer the type of a raising error"
+inferType Ξ Γ (TCatch e teTerm faTerm) φ = evalError "cannot infer the type of catching block"
+inferType Ξ Γ (TDecl e term) φ = evalError "cannot infer the type of an exception declaration"
+inferType Ξ Γ (TIfThenElse e tTerm eTerm) φ = evalError "cannot infer the type of an if-statement declaration"
+inferType Ξ Γ (TApp lam arg) φ₀ = do
   let φ₂ = checkAnn lam
 
-  (a [ φ₁ ]⇒ b , gtu) ← inferType Ξ ctx lam φ₂
+  (a [ φ₁ ]⇒ b , gtu) ← inferType Ξ Γ lam φ₂
     where _ → evalError "application head should have a function type"
   
   let φ₃ = checkAnn arg
       (φ₄ , φ₄-proof) = mergeAnn φ₁ φ₂
       (φ₅ , φ₅-proof) = mergeAnn φ₃ φ₄
 
-  gtv ← checkType Ξ ctx arg a φ₃
+  gtv ← checkType Ξ Γ arg a φ₃
   
-  refl ← convertAnn φ₅ exc
+  refl ← convertAnn φ₅ φ₀
   
   return (b , TyTApp gtu gtv φ₄-proof φ₅-proof)
-
-inferType Ξ ctx (term ↓ type) exc = do
-  tr ← checkType Ξ ctx term type exc
+inferType Ξ Γ (term ↓ type) φ₀ = do
+  tr ← checkType Ξ Γ term type φ₀
   return (type , TyTAnn tr)
   
-checkType Ξ ctx (TLam x body) (a [ φ ]⇒ b) exc = do
-  let (φ₃ , φ₃-proof) = mergeAnn φ exc
-  tr ← checkType Ξ (ctx , x ∶ a) body b φ₃ 
-  return (TyTLam tr φ₃-proof)
+checkType Ξ Γ (TLam x body) (a [ φ₁ ]⇒ b) φ₀ = do
+  -- Note: φ₂ may contain duplicates!
+  let (φ₂ , φ₂-proof) = mergeAnn φ₁ φ₀
+  tr ← checkType Ξ (Γ , x ∶ a) body b φ₂
+  return (TyTLam tr φ₂-proof)
 checkType _ _ (TLam _ _) _ _ = evalError "lambda should have a function type"
-checkType Ξ ctx (TDecl e term) ty exc = do
-  tr ← checkType (e ∷ Ξ) ctx term ty exc
+checkType Ξ Γ (TDecl e term) ty φ₀ = do
+  tr ← checkType (e ∷ Ξ) Γ term ty φ₀
   return (TyTDecl tr)
-checkType Ξ ctx (TRaise e) ty exc with e ∈? Ξ | e ∈ₐ? exc
-...                             | yes (e∈Ξ)   | yes (e∈ₐexc) = return (TyTRaise e∈Ξ e∈ₐexc)
+checkType Ξ Γ (TRaise e) ty φ₀ with e ∈? Ξ | e ∈ₐ? φ₀
+...                             | yes (e∈Ξ)   | yes (e∈ₐφ₀) = return (TyTRaise e∈Ξ e∈ₐφ₀)
 ...                             | yes _       | _           = evalError "raising an exception that has not been annotated"
 ...                             | _           | yes _       = evalError "raising an exception that has not been declared"
 ...                             | _           | _           = evalError "raising an exception that has neither been declared or annotated"
-checkType Ξ ctx (TCatch e teTerm faTerm) ty exc with e ∈ₐ? exc
-...                             | no e∉exc                 = do
+checkType Ξ Γ (TCatch e teTerm faTerm) ty φ₀ with e ∈ₐ? φ₀
+...                             | no e∉φ₀                 = do
                                     let φ₁ = checkAnn teTerm
                                         φ₂ = checkAnn faTerm
                                         (φ₃ , φ₃-proof) = mergeAnn φ₁ φ₂
 
-                                    refl ← convertAnn φ₃ exc
+                                    refl ← convertAnn φ₃ φ₀
 
-                                    tr₁ ← checkType Ξ ctx teTerm ty (e +++ φ₁)
-                                    tr₂ ← checkType Ξ ctx faTerm ty φ₂
+                                    tr₁ ← checkType Ξ Γ teTerm ty (e +++ φ₁)
+                                    tr₂ ← checkType Ξ Γ faTerm ty φ₂
                                     
                                     return (TyTCatch tr₁ tr₂ φ₃-proof)
 ...                             | yes _                      = evalError "checking an exception that's already covered"
-checkType Ξ ctx (TIfThenElse cond tTerm eTerm) ty exc = do
+checkType Ξ Γ (TIfThenElse cond tTerm eTerm) ty φ₀ = do
   let φ₁ = checkAnn cond
       φ₂ = checkAnn tTerm
       φ₃ = checkAnn eTerm
       (φ₄ , φ₄-proof) = mergeAnn φ₁ φ₂
       (φ₅ , φ₅-proof) = mergeAnn φ₃ φ₄
 
-  (bool , tr₁) ← inferType Ξ ctx cond φ₁
+  refl ← convertAnn φ₅ φ₀
+  
+  (bool , tr₁) ← inferType Ξ Γ cond φ₁
     where _ → evalError "if-then condition should have a boolean type"
-  tr₂ ← checkType Ξ ctx tTerm ty φ₂
-  tr₃ ← checkType Ξ ctx eTerm ty φ₃
-
-  refl ← convertAnn φ₅ exc
+  tr₂ ← checkType Ξ Γ tTerm ty φ₂
+  tr₃ ← checkType Ξ Γ eTerm ty φ₃
     
   return (TyTIfThenElse tr₁ tr₂ tr₃ φ₄-proof φ₅-proof)
-checkType Ξ ctx term ty exc = do
-  (t , tr) ← inferType Ξ ctx term exc
+checkType Ξ Γ term ty φ₀ = do
+  (t , tr) ← inferType Ξ Γ term φ₀
   -- we call the conversion checker, which (if it succeeds) returns an equality proof,
   -- unifying the left- and right-hand sides of the equality for the remainder of the do-block
   refl ← convert t ty
-  return tr    
+  return tr     

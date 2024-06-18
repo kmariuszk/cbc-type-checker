@@ -7,7 +7,7 @@ name = String
 open import TypeChecker.Terms {name}
 open import TypeChecker.Types
 open import TypeChecker.TypingRules
-open import TypeChecker {name}
+open import TypeChecker {name}          
 open import Util.Context {name}
 open import Util.Evaluator
 open import Util.Scope
@@ -116,3 +116,51 @@ private
         ) _∪_≡_.empty
     )))
   test-if-with-exception = refl 
+
+  {- This code tests an application with multiple catch and lambda terms -}
+
+  scope₄ : Scope name
+  scope₄ = "inputOne" ∷ "inputTwo" ∷ "output" ∷ "defaultError" ∷ sempty
+
+  app-with-catch-fun : Term scope₄
+  app-with-catch-fun = TDecl 
+    ("mainError")
+    (TCatch 
+      "mainError" 
+      (TApp
+        -- Lambda function 
+        (TLam "conditionOne" 
+          (TDecl "innerError" 
+          (TCatch "innerError" 
+            (TApp 
+              (TLam "conditionTwo" 
+                (TIfThenElse 
+                  (TVar "conditionTwo" hereₛ) 
+                  (TVar "output" (thereₛ (thereₛ (thereₛ (thereₛ hereₛ))))) 
+                  (TRaise "innerError")) 
+              ↓
+              -- Function type 
+              (nat [ "innerError" +++ ∅ ]⇒ nat)) 
+            -- Argument for the function
+            (TVar "inputTwo" (thereₛ (thereₛ hereₛ)))) 
+          -- Handle annotation
+          (TVar "defaultError" (thereₛ (thereₛ (thereₛ (thereₛ hereₛ))))))) 
+          ↓ (bool [ "mainError" +++ ∅ ]⇒ nat)
+      )
+        -- Argument for the function 
+      (TVar "inputOne" hereₛ)
+    ) 
+    -- Handle annotation
+    (TVar "defaultError" (thereₛ (thereₛ (thereₛ hereₛ)))))
+
+  -- app-with-catch-type : Type
+  -- app-with-catch-type = nat
+
+  -- context₄ : Context Type scope₄
+  -- context₄ = (((cempty , "defaultError" ∶ nat) , "output" ∶ nat) , "inputTwo" ∶ nat) , "inputOne" ∶ bool
+
+  -- app-with-catch-tc : Evaluator ([] ◂ context₄ ⊢ app-with-catch-fun ∶ app-with-catch-type ∣ ∅)
+  -- app-with-catch-tc = checkType [] context₄ app-with-catch-fun app-with-catch-type ∅
+
+  -- test-app-with-catch : app-with-catch-tc ≡ return ({!   !})
+  -- test-app-with-catch = refl
