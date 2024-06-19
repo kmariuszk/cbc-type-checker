@@ -11,6 +11,7 @@ open import Util.Context
 open import Util.Annotation
 open import Data.List
 open import Data.Empty
+open import Relation.Nullary using (¬_)
 open import Data.String hiding (_++_)
 
 private variable
@@ -29,13 +30,12 @@ data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → T
   TyTVar
     : (p : x ∈ₛ α)
     ----------------------------------------
-    → Ξ ◂ Γ ⊢ TVar x p ∶ lookupVar Γ x p ∣ φ
+    → Ξ ◂ Γ ⊢ TVar x p ∶ lookupVar Γ x p ∣ ∅
 
   TyTLam
-    : Ξ ◂ (Γ , x ∶ a) ⊢ u ∶ b ∣ φ₃ 
-    → φ₁ ∪ φ₂ ≡ φ₃ 
+    : Ξ ◂ (Γ , x ∶ a) ⊢ u ∶ b ∣ φ₁ 
     ----------------------------------------
-    → Ξ ◂ Γ ⊢ TLam x u ∶ a [ φ₁ ]⇒ b ∣ φ₂
+    → Ξ ◂ Γ ⊢ TLam x u ∶ a [ φ₁ ]⇒ b ∣ ∅
   
   TyTApp
     : Ξ ◂ Γ ⊢ u ∶ a [ φ₁ ]⇒ b ∣ φ₂
@@ -47,16 +47,19 @@ data _◂_⊢_∶_∣_ (Ξ : List String) (Γ : Context Type α) : Term α → T
 
   TyTRaise
     : e ∈ Ξ
-    → e ∈ₐ φ
     ----------------------------------------
-    → Ξ ◂ Γ ⊢ TRaise e ∶ a ∣ φ 
+    → Ξ ◂ Γ ⊢ TRaise e ∶ a ∣ (e +++ ∅) 
 
   TyTCatch
-    : Ξ ◂ Γ ⊢ u ∶ a ∣ (e +++ φ₁)
+    : Ξ ◂ Γ ⊢ u ∶ a ∣ φ₁
     → Ξ ◂ Γ ⊢ v ∶ a ∣ φ₂
-    → φ₁ ∪ φ₂ ≡ φ₃
+    → e ∈ Ξ
+    → e ∈ₐ φ₁ -- ?
+    → ¬ (e ∈ₐ φ₂) -- ?
+    → φ₁ - e ≡ φ₃
+    → φ₃ ∪ φ₂ ≡ φ₄
     ----------------------------------------
-    → Ξ ◂ Γ ⊢ TCatch e u v ∶ a ∣ φ₃
+    → Ξ ◂ Γ ⊢ TCatch e u v ∶ a ∣ φ₄
 
   TyTDecl
     : (e ∷ Ξ) ◂ Γ ⊢ u ∶ a ∣ φ

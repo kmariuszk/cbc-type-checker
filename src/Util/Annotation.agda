@@ -6,7 +6,8 @@ open import Data.List.Membership.DecSetoid ≡-decSetoid
 open import Data.Product
 open import Data.String
 open import Relation.Nullary
-open import Relation.Binary.PropositionalEquality as Eq using (_≡_; refl; cong)
+open import Data.Empty
+open import Relation.Binary.PropositionalEquality as Eq using (_≡_; refl; cong; _≢_)
 
 data Ann : Set where
   ∅ : Ann
@@ -36,3 +37,19 @@ x ∈ₐ? (a +++ φ) with x ≟ a
 ... | no x≢a with x ∈ₐ? φ
 ...    | yes p = yes (thereₐ p)
 ...    | no n = no (λ { hereₐ → contradiction refl x≢a ; (thereₐ p') → n p' })
+
+-- Subtraction of a single element
+infix 4 _-_≡_
+
+data _-_≡_ : Ann → String → Ann → Set where
+  remove-here : ∀ {v φ} → (v +++ φ) - v ≡ φ
+  remove-there : ∀ {v w φ φ₃} → φ - v ≡ φ₃ → (w +++ φ) - v ≡ (w +++ φ₃)
+  remove-not-present : ∀ {φ x} → ¬ (x ∈ₐ φ) → φ - x ≡ φ
+
+-- Subtraction proof generator
+removeAnn : (φ : Ann) (x : String) → Σ[ φ₃ ∈ Ann ] φ - x ≡ φ₃
+removeAnn ∅ x = ∅ , remove-not-present (λ ()) -- If the annotation list is empty, nothing to remove
+removeAnn (a +++ φ) x with x ≟ a
+... | yes refl = φ , remove-here -- If the element matches the head, remove it
+... | no x≢a with removeAnn φ x
+...    | φ₃ , p = (a +++ φ₃) , remove-there p -- Recur on the tail
