@@ -22,7 +22,6 @@ open RawMonad ⦃ ... ⦄
 
 private variable
   α : Scope name
-  u : Term α
 
 -- Checking whether two annotations are equal.
 convertAnn : (a b : Ann) → Evaluator (a ≡ b)
@@ -31,9 +30,8 @@ convertAnn (s₁ +++ φ₁) (s₂ +++ φ₂) with s₁ ≟ s₂
 ... | yes refl = do
   refl <- convertAnn φ₁ φ₂
   return refl
-... | no _ = evalError "unequal exceptions 2"
-convertAnn ∅ _ = evalError "unequal exceptions 3"
-convertAnn _ ∅ = evalError "unequal exceptions 4"
+... | no _ = evalError "Unequal exceptions when converting annotations!"
+convertAnn _ _ = evalError "Unequal exceptions when converting annotations!"
 
 -- Checking whether two types are equal.
 convert : (a b : Type) → Evaluator (a ≡ b)
@@ -44,16 +42,16 @@ convert (la [ lφ ]⇒ lb) (ra [ rφ ]⇒ rb) = do
   refl ← convert lb rb
   refl ← convertAnn lφ rφ
   return refl
-convert _ _ = evalError "unequal types"
+convert _ _ = evalError "Unequal types when converting types!" 
 
 helperFunctionOne : (e : String) → (φ : Ann) → Evaluator (e ∈ₐ φ)
 helperFunctionOne e φ with e ∈ₐ? φ
 ... | yes e∈φ = return e∈φ
-... | no _ = evalError "exception not in the annotation"
+... | no _ = evalError "Catching not an annotated exception!"
 
 helperFunctionTwo : (e : String) → (φ : Ann) → Evaluator (¬ (e ∈ₐ φ))
 helperFunctionTwo e φ with e ∈ₐ? φ
-... | yes _ = evalError "exception in the annotation"
+... | yes _ = evalError "Handle-branch of TCatch should not contain the exception!"
 ... | no e∉φ = return e∉φ
 
 -- Bidirectional style type checking, with two functions defined mutually.
@@ -65,16 +63,15 @@ inferType : ∀ (Ξ : List String) (Γ : Context Type α) u             → Eval
 checkType : ∀ (Ξ : List String) (Γ : Context Type α) u (ty : Type) → Evaluator (Σ[ φ ∈ Ann ] Ξ ◂ Γ ⊢ u ∶ ty ∣ φ)
 
 inferType Ξ Γ (TVar x index)              = return (lookupVar Γ x index , (∅ , TyTVar index))
-inferType Ξ Γ (TLam x body)               = evalError "cannot infer the type of a lambda"
-inferType Ξ Γ (TRaise e)                  = evalError "cannot infer the type of a raising error"
-inferType Ξ Γ (TCatch e teTerm faTerm)    = evalError "cannot infer the type of catching block"
-inferType Ξ Γ (TDecl e term)              = evalError "cannot infer the type of an exception declaration"
-inferType Ξ Γ (TIfThenElse e tTerm eTerm) = evalError "cannot infer the type of an if-statement declaration"
-
+inferType Ξ Γ (TLam x body)               = evalError "Type-checker cannot infer the type of a lambda!"
+inferType Ξ Γ (TRaise e)                  = evalError "Type-checker cannot infer the type of a raising error!"
+inferType Ξ Γ (TCatch e teTerm faTerm)    = evalError "Type-checker cannot infer the type of a catching block!"
+inferType Ξ Γ (TDecl e term)              = evalError "Type-checker cannot infer the type of an exception declaration!"
+inferType Ξ Γ (TIfThenElse e tTerm eTerm) = evalError "Type-checker cannot infer the type of an if-statement declaration!"
 inferType Ξ Γ (TApp lam arg)              = do
   -- Infer types for the head and argument of the application.
   (a [ φ₁ ]⇒ b , (φ₂ , tr₁)) ← inferType Ξ Γ lam
-    where _ → evalError "application head should have a function type"
+    where _ → evalError "Application head should have a function type!"
   (φ₃ , tr₂) ← checkType Ξ Γ arg a
 
   -- Sum the annotations of the head and argument.
@@ -82,7 +79,6 @@ inferType Ξ Γ (TApp lam arg)              = do
       (φ₅ , φ₅-proof) = mergeAnn φ₃ φ₄
 
   return (b , (φ₅ , TyTApp tr₁ tr₂ φ₄-proof φ₅-proof))
-  
 inferType Ξ Γ (term ↓ type)                = do
   (φ , tr) ← checkType Ξ Γ term type
   return (type , (φ , TyTAnn tr))
@@ -95,16 +91,16 @@ checkType Ξ Γ (TLam x body) (a [ φ₁ ]⇒ b) = do
   refl ← convertAnn φ₁ φ₂
   
   return (∅ , TyTLam tr)
-checkType _ _ (TLam _ _) _ = evalError "Lambda should have a function type"
+checkType _ _ (TLam _ _) _ = evalError "Lambda should have a function type!"
 checkType Ξ Γ (TDecl e term) ty            = do
   (φ , tr) ← checkType (e ∷ Ξ) Γ term ty
   return (φ , TyTDecl tr)
 checkType Ξ Γ (TRaise e) ty with e ∈? Ξ
 ...                             | yes (e∈Ξ)  = return (e +++ ∅ , TyTRaise e∈Ξ)
-...                             | no _       = evalError "Raising a not declared exception"
+...                             | no _       = evalError "Raising a not declared exception!"
 checkType Ξ Γ (TCatch e exceptionTerm handleTerm) ty with e ∈? Ξ
-... | no _ = evalError "Catching a not declared exception"
-... | yes (e∈Ξ) = do
+...                             | no _ = evalError "Catching a not declared exception!"
+...                             | yes (e∈Ξ) = do
   -- Check types for the exception term and the exception handler.
   (φ₁ , tr₁) ← checkType Ξ Γ exceptionTerm ty
   (φ₂ , tr₂) ← checkType Ξ Γ handleTerm ty
@@ -123,7 +119,7 @@ checkType Ξ Γ (TCatch e exceptionTerm handleTerm) ty with e ∈? Ξ
 checkType Ξ Γ (TIfThenElse cond term₁ term₂) ty = do
   -- Check the type of the condition and infer the types of the then- and else-branches.
   (bool , (φ₁ , tr₁)) ← inferType Ξ Γ cond
-    where _ → evalError "if-then condition should have a boolean type"
+    where _ → evalError "If-then-else condition should have a boolean type!"
   (φ₂ , tr₂) ← checkType Ξ Γ term₁ ty
   (φ₃ , tr₃) ← checkType Ξ Γ term₂ ty
 

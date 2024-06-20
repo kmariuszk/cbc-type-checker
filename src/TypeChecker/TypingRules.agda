@@ -1,6 +1,5 @@
 module TypeChecker.TypingRules {name : Set} where
 
--- Imports needed for the String membership proofs
 open import Data.String.Properties
 open import Data.List.Membership.DecSetoid ≡-decSetoid
 
@@ -11,8 +10,8 @@ open import Util.Context
 open import Util.Annotation
 open import Data.List
 open import Data.Empty
-open import Relation.Nullary using (¬_)
 open import Data.String hiding (_++_)
+open import Relation.Nullary using (¬_)
 
 private variable
   α : Scope name

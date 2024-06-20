@@ -183,7 +183,7 @@ private
             (hereₐ) 
             ((λ ())) 
             remove-here _∪_≡_.empty
-          ) 
+        ) 
         (TyTVar (thereₛ (thereₛ (thereₛ (thereₛ hereₛ)))))
         (there (here refl)) 
         (hereₐ) 
