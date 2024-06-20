@@ -5,9 +5,6 @@ open import Util.Scope
 open import Data.List
 open import Data.String
 
-private variable
-  α : Scope name
-
 data Term (α : Scope name) : Set where
   TVar  : (x : name) → x ∈ₛ α → Term α
   TLam  : (x : name) (v : Term (x ∷ α)) → Term α
